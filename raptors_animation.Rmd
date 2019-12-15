@@ -135,43 +135,42 @@ base_plot <- animation_df %>%
   # geom_image(data = team_animation_df %>% filter(points == 1), 
   #            aes(image = "~/Downloads/basketball copy.png"), size = 0.06, asp = 0.5, ) +
   # geom_image(data = team_animation_df %>% filter(points == 2), 
-  #            aes(image = "~/Downloads/basketball.png"), size = 0.07, asp = 0.5) +
-  
+  #            aes(image = "~/Downloads/basketball.png"), size = 0.07, asp = 0.5) 
 ```
 
 ```{r}
-# Both Teams
-team_animation_df <- animation_df %>%
-  filter(!is.na(team)) %>%
-  mutate(team = factor(team, levels = c("Toronto Raptors", "Los Angeles Clippers")))
-
-annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, data){ 
-  layer(data = data, 
-        stat = StatIdentity, 
-        position = PositionIdentity, 
-        geom = ggplot2:::GeomCustomAnn, 
-        inherit.aes = TRUE, 
-        params = list(grob = grob, xmin = xmin, xmax = xmax,ymin = ymin, ymax = ymax))
-}
-
-team_plot <- team_animation_df %>%
-  ggplot(aes(x = scoring_player, y = player_order, group = action_order)) +
-  geom_image(aes(image = "~/Downloads/basketball.png")) +
-  ggthemes::scale_fill_tableau(name = NULL) +
-  facet_wrap(~team, scales = "free_x", nrow = 2) +
-  labs(title = "[{closest_state}]",
-       x = "",
-       y = "Baskets") +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_rect(color="black", fill = "#A1A1A4", size = 1.5, linetype = "solid"),
-        plot.title = element_markdown(size = 35, face = "bold", colour = "#000000",
-                                      lineheight = 1, vjust = -1, hjust = 0.5),
-        strip.text = element_markdown(size = 11))
-
-team_plot <- team_plot + 
-  annotation_custom2(raptors_logo, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf, data = team_animation_df[1,]) + 
-  annotation_custom2(opponent_logo, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf, data = team_animation_df[2,]) 
+# # Both Teams
+# team_animation_df <- animation_df %>%
+#   filter(!is.na(team)) %>%
+#   mutate(team = factor(team, levels = c("Toronto Raptors", "Los Angeles Clippers")))
+# 
+# annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, data){ 
+#   layer(data = data, 
+#         stat = StatIdentity, 
+#         position = PositionIdentity, 
+#         geom = ggplot2:::GeomCustomAnn, 
+#         inherit.aes = TRUE, 
+#         params = list(grob = grob, xmin = xmin, xmax = xmax,ymin = ymin, ymax = ymax))
+# }
+# 
+# team_plot <- team_animation_df %>%
+#   ggplot(aes(x = scoring_player, y = player_order, group = action_order)) +
+#   geom_image(aes(image = "~/Downloads/basketball.png")) +
+#   ggthemes::scale_fill_tableau(name = NULL) +
+#   facet_wrap(~team, scales = "free_x", nrow = 2) +
+#   labs(title = "[{closest_state}]",
+#        x = "",
+#        y = "Baskets") +
+#   theme(panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         strip.background = element_rect(color="black", fill = "#A1A1A4", size = 1.5, linetype = "solid"),
+#         plot.title = element_markdown(size = 35, face = "bold", colour = "#000000",
+#                                       lineheight = 1, vjust = -1, hjust = 0.5),
+#         strip.text = element_markdown(size = 11))
+# 
+# team_plot <- team_plot + 
+#   annotation_custom2(raptors_logo, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf, data = team_animation_df[1,]) + 
+#   annotation_custom2(opponent_logo, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf, data = team_animation_df[2,]) 
 ```
 
 ```{r}
