@@ -4,14 +4,13 @@ output: html_document
 ---
 
 ```{r packages, message = FALSE}
-library(tidyverse)
-library(gganimate)
-library(ggimage) # for emojis
-library(rvest)
-library(lubridate)
-library(tidytext)
-library(ggrepel)
-library(png)
+library(tidyverse) # tidyverse
+library(gganimate) # for animating the chart
+library(ggimage) # for inserting the basketballs
+library(rvest) # for scraping websites
+library(lubridate) # for date manipulation
+library(ggrepel) 
+library(png) 
 library(grid)
 library(extrafont)
 library(ggtext)
@@ -22,9 +21,7 @@ theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 ```{r scrape_data}
 page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912110TOR.html"
 
-html_parse <- read_html(page_url)
-
-event_info <- html_parse %>%
+event_info <- read_html(page_url) %>%
   html_table()
 ```
 
@@ -45,12 +42,10 @@ scoring_plays <- game_data %>%
          shot_type = case_when(
            toronto_point_increase == 1 | opponent_point_increase == 1 ~ "free-throw",
            toronto_point_increase == 2 | opponent_point_increase == 2 ~ "2-pointer",
-           toronto_point_increase == 3 | opponent_point_increase == 3 ~ "3-pointer",
-           TRUE ~ "dunno"
+           toronto_point_increase == 3 | opponent_point_increase == 3 ~ "3-pointer"
          )) %>%
   filter(!is.na(toronto_point_increase) | !is.na(opponent_point_increase),
          str_detect(running_score, "[0-9]+-[0-9]+"))
-
 
 scoring_df <- scoring_plays %>%
   mutate(scoring_player = str_extract(toronto_action, "[A-Z]\\. [A-Za-z-]+"),
@@ -78,24 +73,24 @@ cleaned_df <- start_of_game %>%
   ungroup() 
 
 if (str_detect(page_url, "(TOR)") == TRUE){
- cleaned_df <- cleaned_df %>%  
+  cleaned_df <- cleaned_df %>%  
     mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
            away_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
            running_score = str_glue("{toronto_score}-{away_score}"),
            points = as.numeric(points))
- } else {
- cleaned_df <- cleaned_df %>%  
+} else {
+  cleaned_df <- cleaned_df %>%  
     mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
            away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
            running_score = str_glue("{toronto_score}-{away_score}"),
            points = as.numeric(points))
- }
+}
 
- cleaned_df <- cleaned_df %>%  
-    mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
-           away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
-           running_score = str_glue("{toronto_score}-{away_score}"),
-           points = as.numeric(points))
+cleaned_df <- cleaned_df %>%  
+  mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
+         away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
+         running_score = str_glue("{toronto_score}-{away_score}"),
+         points = as.numeric(points))
 
 animation_df <- cleaned_df %>%
   mutate(running_score = factor(running_score, 
@@ -122,23 +117,61 @@ x_axis <- animation_df %>%
 
 base_plot <- animation_df %>%
   ggplot(aes(x = scoring_player, y = player_order, group = action_order)) +
-  annotation_custom(raptors_logo, 
-                    xmin = -Inf, 
-                    xmax = Inf, 
-                    ymin = -Inf, ymax = Inf) +
-  # geom_image(data = team_animation_df %>% filter(points == 3), aes(image = "~/Downloads/basketball_red.png"), size = 0.075, asp = 0.5) +
-  # geom_image(data = team_animation_df %>% filter(points == 1), aes(image = "~/Downloads/basketball copy.png"), size = 0.06, asp = 0.5, ) +
-  # geom_image(data = team_animation_df %>% filter(points == 2), aes(image = "~/Downloads/basketball.png"), size = 0.07, asp = 0.5) +
   geom_image(aes(image = "~/Downloads/basketball.png"), size = 0.06) +
-scale_x_discrete(limits = x_axis$scoring_player, 
-                 labels = str_wrap(x_axis$scoring_player, 2)) +
+  scale_x_discrete(limits = x_axis$scoring_player, 
+                   labels = str_wrap(x_axis$scoring_player, 2)) +
   labs(title = "<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:#98002E'>Los Angeles Clippers</b>",
        x = "",
        y = "Baskets") +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
-                                      lineheight = 1, vjust = -1, hjust = 0.56))
+                                      lineheight = 1, vjust = -1, hjust = 0.56)) +
+  annotation_custom(raptors_logo, 
+                    xmin = -Inf, xmax = Inf, 
+                    ymin = -Inf, ymax = Inf) 
+  # geom_image(data = team_animation_df %>% filter(points == 3), 
+  #            aes(image = "~/Downloads/basketball_red.png"), size = 0.075, asp = 0.5) +
+  # geom_image(data = team_animation_df %>% filter(points == 1), 
+  #            aes(image = "~/Downloads/basketball copy.png"), size = 0.06, asp = 0.5, ) +
+  # geom_image(data = team_animation_df %>% filter(points == 2), 
+  #            aes(image = "~/Downloads/basketball.png"), size = 0.07, asp = 0.5) +
+  
+```
+
+```{r}
+# Both Teams
+team_animation_df <- animation_df %>%
+  filter(!is.na(team)) %>%
+  mutate(team = factor(team, levels = c("Toronto Raptors", "Los Angeles Clippers")))
+
+annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, data){ 
+  layer(data = data, 
+        stat = StatIdentity, 
+        position = PositionIdentity, 
+        geom = ggplot2:::GeomCustomAnn, 
+        inherit.aes = TRUE, 
+        params = list(grob = grob, xmin = xmin, xmax = xmax,ymin = ymin, ymax = ymax))
+}
+
+team_plot <- team_animation_df %>%
+  ggplot(aes(x = scoring_player, y = player_order, group = action_order)) +
+  geom_image(aes(image = "~/Downloads/basketball.png")) +
+  ggthemes::scale_fill_tableau(name = NULL) +
+  facet_wrap(~team, scales = "free_x", nrow = 2) +
+  labs(title = "[{closest_state}]",
+       x = "",
+       y = "Baskets") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_rect(color="black", fill = "#A1A1A4", size = 1.5, linetype = "solid"),
+        plot.title = element_markdown(size = 35, face = "bold", colour = "#000000",
+                                      lineheight = 1, vjust = -1, hjust = 0.5),
+        strip.text = element_markdown(size = 11))
+
+team_plot <- team_plot + 
+  annotation_custom2(raptors_logo, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf, data = team_animation_df[1,]) + 
+  annotation_custom2(opponent_logo, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf, data = team_animation_df[2,]) 
 ```
 
 ```{r}
@@ -153,9 +186,8 @@ animate_plot <- function(plot_type = base_plot){
 anim <- animate_plot(base_plot)
 ```
 
-```{r} 
-# do i just do our points only?
-anim_save(str_glue("animations/raptors_clippers.gif"), anim, fps = 25, duration = nrow(animation_df)/3.5, type = "cairo-png", width = 1024, height = 512, renderer = gifski_renderer(loop = FALSE))
+```{r}
+anim_save(str_glue("animations/raptors_clippers-{str_extract(page_url, '[0-9]+')}.gif"), anim, fps = 25, duration = nrow(animation_df)/3.5, type = "cairo-png", width = 1024, height = 512, renderer = gifski_renderer(loop = FALSE))
 
 beepr::beep()
 ```
