@@ -2,7 +2,7 @@
 
 ![Example](animations/raptors_clippers-201912110.gif)
 
-I will post these animations to [r/Raptors]()
+I post these animations to [r/TorontoRaptors](https://www.reddit.com/r/torontoraptors/)
 
 ## Details
 
