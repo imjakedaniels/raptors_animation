@@ -19,13 +19,14 @@ theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 ```
 
 ```{r scrape_data}
-page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912110TOR.html"
+page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912140TOR.html"
 
 event_info <- read_html(page_url) %>%
   html_table()
 ```
 
 ```{r clean_data}
+opponent <- "Brooklyn Nets"
 game_data <- as.data.frame(event_info)[-1,]
 
 # Check if toronto is the home team
@@ -52,7 +53,7 @@ scoring_df <- scoring_plays %>%
          scoring_play = str_extract(opponent_action, "[A-Z]\\. [A-Za-z-]+")) %>%
   mutate(scoring_player = str_remove(paste0(scoring_player, scoring_play), "(NA)"),
          points = str_extract(paste0(toronto_point_increase, opponent_point_increase), "[0-9]"),
-         team = ifelse(str_detect(toronto_action, "[a-z]"), "Toronto Raptors", "Los Angeles Clippers")) %>%
+         team = ifelse(str_detect(toronto_action, "[a-z]"), "Toronto Raptors", opponent)) %>%
   select(shot_type, scoring_player, points, team, running_score) 
 ```
 
@@ -103,10 +104,6 @@ animation_df <- cleaned_df %>%
 l <- readPNG("~/Downloads/toronto_raptors_logo.png")
 f <- matrix(rgb(l[,,1],l[,,2],l[,,3], l[,,4] * 0.2), nrow=dim(l)[1]) #0.2 is alpha
 raptors_logo <- rasterGrob(f, interpolate=TRUE)
-
-w <- readPNG("~/Downloads/400px-Philadelphia_76ers_logo.svg.png")
-g <- matrix(rgb(w[,,1],w[,,2],w[,,3], w[,,4] * 0.2), nrow=dim(w)[1]) #0.2 is alpha
-opponent_logo <- rasterGrob(g, interpolate=TRUE)
 ```
 
 ```{r, warning = FALSE}
@@ -120,7 +117,7 @@ base_plot <- animation_df %>%
   geom_image(aes(image = "~/Downloads/basketball.png"), size = 0.06) +
   scale_x_discrete(limits = x_axis$scoring_player, 
                    labels = str_wrap(x_axis$scoring_player, 2)) +
-  labs(title = "<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:#98002E'>Los Angeles Clippers</b>",
+  labs(title = "<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:#000000'>Brooklyn Nets</b>",
        x = "",
        y = "Baskets") +
   theme(panel.grid.major = element_blank(),
@@ -140,9 +137,14 @@ base_plot <- animation_df %>%
 
 ```{r}
 # # Both Teams
+#
+# w <- readPNG("~/Downloads/400px-Philadelphia_76ers_logo.svg.png")
+# g <- matrix(rgb(w[,,1],w[,,2],w[,,3], w[,,4] * 0.2), nrow=dim(w)[1]) #0.2 is alpha
+# opponent_logo <- rasterGrob(g, interpolate=TRUE)
+#
 # team_animation_df <- animation_df %>%
 #   filter(!is.na(team)) %>%
-#   mutate(team = factor(team, levels = c("Toronto Raptors", "Los Angeles Clippers")))
+#   mutate(team = factor(team, levels = c("Toronto Raptors", "Brooklyn Nets")))
 # 
 # annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, data){ 
 #   layer(data = data, 
@@ -186,7 +188,7 @@ anim <- animate_plot(base_plot)
 ```
 
 ```{r}
-anim_save(str_glue("animations/raptors_clippers-{str_extract(page_url, '[0-9]+')}.gif"), anim, fps = 25, duration = nrow(animation_df)/3.5, type = "cairo-png", width = 1024, height = 512, renderer = gifski_renderer(loop = FALSE))
+anim_save(str_glue("animations/raptors_{opponent}-{str_extract(page_url, '[0-9]+')}.gif"), anim, fps = 25, duration = nrow(animation_df)/3.5, type = "cairo-png", width = 1024, height = 512, renderer = gifski_renderer(loop = FALSE))
 
 beepr::beep()
 ```
