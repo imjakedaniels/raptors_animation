@@ -192,12 +192,3 @@ anim_save(str_glue("animations/raptors_clippers-{str_extract(page_url, '[0-9]+')
 beepr::beep()
 ```
 
-```{r}
-# animate(base_pic, nframes = 100, fps = 10, type = "cairo", renderer = av_renderer(audio = "animate_files/500_miles.WMA"))
-# 
-# anim_save(str_glue("animations/raptors_heat.mpeg"), anim, fps = 50, type = "cairo", width = 1024, height = 512, duration = 35, renderer = av_renderer(), )
-
-```
-
-
-
