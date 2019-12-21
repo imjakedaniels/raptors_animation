@@ -19,14 +19,14 @@ theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 ```
 
 ```{r scrape_data}
-page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912140TOR.html"
+page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912200TOR.html"
 
 event_info <- read_html(page_url) %>%
   html_table()
 ```
 
 ```{r clean_data}
-opponent <- "Brooklyn Nets"
+opponent <- "Washington Wizards"
 game_data <- as.data.frame(event_info)[-1,]
 
 # Check if toronto is the home team
@@ -106,6 +106,8 @@ f <- matrix(rgb(l[,,1],l[,,2],l[,,3], l[,,4] * 0.2), nrow=dim(l)[1]) #0.2 is alp
 raptors_logo <- rasterGrob(f, interpolate=TRUE)
 ```
 
+https://teamcolorcodes.com/nba-team-color-codes/
+
 ```{r, warning = FALSE}
 # Raptors Only
 x_axis <- animation_df %>% 
@@ -120,7 +122,7 @@ base_plot <- animation_df %>%
   geom_image(aes(image = "~/Downloads/basketball.png"), size = 0.06) +
   scale_x_discrete(limits = x_axis$scoring_player, 
                    labels = str_wrap(x_axis$scoring_player, 2)) +
-  labs(title = "<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:#000000'>Brooklyn Nets</b>",
+  labs(title = "<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:#002B5C'>Washington Wizards</b>",
        x = "",
        y = "Baskets") +
   theme(panel.grid.major = element_blank(),
@@ -130,7 +132,7 @@ base_plot <- animation_df %>%
   # geom_image(data = team_animation_df %>% filter(points == 3), 
   #            aes(image = "~/Downloads/basketball_red.png"), size = 0.075, asp = 0.5) +
   # geom_image(data = team_animation_df %>% filter(points == 1), 
-  #            aes(image = "~/Downloads/basketball copy.png"), size = 0.06, asp = 0.5, ) +
+  #            aes(image = "~/Downloads/basketball copy.png"), size = 0.06, asp = 0.5) +
   # geom_image(data = team_animation_df %>% filter(points == 2), 
   #            aes(image = "~/Downloads/basketball.png"), size = 0.07, asp = 0.5) 
 ```
