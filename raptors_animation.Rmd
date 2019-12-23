@@ -3,161 +3,164 @@ title: "Raptors baskets"
 output: html_document
 ---
 
+# Setup
+
 ```{r packages, message = FALSE}
 library(tidyverse) # tidyverse
 library(gganimate) # for animating the chart
 library(ggimage) # for inserting the basketballs
 library(rvest) # for scraping websites
 library(lubridate) # for date manipulation
+library(extrafont) # for nice text
+library(ggtext) # for rendering colour text
 library(ggrepel) 
-library(png) 
-library(grid)
-library(extrafont)
-library(ggtext)
+library(png)  # for loading the raptors logo
+library(grid) # for custom ggplot modification
 loadfonts(device = "pdf", quiet = TRUE)
 theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 ```
 
-```{r scrape_data}
-page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912220TOR.html"
+# Inputs
 
-event_info <- read_html(page_url) %>%
-  html_table()
+You gotta specify these manually for now.
+
+```{r page_link}
+page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912220TOR.html"
 ```
 
-```{r clean_data}
+```{r opponent}
 opponent <- "Dallas Mavericks"
+```
+
+# Cleaning 
+
+```{r get_data}
+# scrape the url for tables
+event_info <- read_html(page_url) %>%
+  html_table()
+
+# extract play-by-play table
 game_data <- as.data.frame(event_info)[-1,]
 
-# Check if toronto is the home team
+# check if toronto is the home team and adjust the column names accordingly
 if (str_detect(page_url, "(TOR)") == TRUE){
   names(game_data) <- c("time", "opponent_action", "opponent_point_increase", "running_score", "toronto_point_increase", "toronto_action")
 } else {
   names(game_data) <- c("time", "toronto_action", "toronto_point_increase", "running_score", "opponent_point_increase", "opponent_action")
 }
+```
 
-# clean up the data
+```{r clean_data}
+# extract only the scoring plays
 scoring_plays <- game_data %>%
   mutate(toronto_point_increase = str_extract(toronto_point_increase, "[0-9]"),
-         opponent_point_increase = str_extract(opponent_point_increase, "[0-9]"),
-         shot_type = case_when(
-           toronto_point_increase == 1 | opponent_point_increase == 1 ~ "free-throw",
-           toronto_point_increase == 2 | opponent_point_increase == 2 ~ "2-pointer",
-           toronto_point_increase == 3 | opponent_point_increase == 3 ~ "3-pointer"
-         )) %>%
+         opponent_point_increase = str_extract(opponent_point_increase, "[0-9]")) %>%
   filter(!is.na(toronto_point_increase) | !is.na(opponent_point_increase),
          str_detect(running_score, "[0-9]+-[0-9]+"))
 
+# extract player name from action data 
 scoring_df <- scoring_plays %>%
-  mutate(scoring_player = str_extract(toronto_action, "[A-Z]\\. [A-Za-z-]+"),
-         scoring_play = str_extract(opponent_action, "[A-Z]\\. [A-Za-z-]+")) %>%
-  mutate(scoring_player = str_remove(paste0(scoring_player, scoring_play), "(NA)"),
-         points = str_extract(paste0(toronto_point_increase, opponent_point_increase), "[0-9]"),
+  mutate(scoring_toronto_player = str_extract(toronto_action, "[A-Z]\\. [A-Za-z-]+"),
+         scoring_opponent_player = str_extract(opponent_action, "[A-Z]\\. [A-Za-z-]+"),
+         scoring_player = str_remove(paste0(scoring_toronto_player, scoring_opponent_player), "(NA)"),
+         scoring_player = str_wrap(scoring_player, 2),
+         points = as.numeric(str_extract(paste0(toronto_point_increase, opponent_point_increase), "[0-9]")),
          team = ifelse(str_detect(toronto_action, "[a-z]"), "Toronto Raptors", opponent)) %>%
-  select(shot_type, scoring_player, points, team, running_score) 
+  select(scoring_player, points, team, running_score) 
 ```
 
-```{r}
-# labels <- scoring_df %>%
-#   group_by(scoring_player) %>%
-#   summarize(total_points = sum(as.numeric(points))) %>%
-#   mutate(label = str_glue("{scoring_player} ({total_points})"))
+# Prep for animation
 
+```{r}
 # make the game start at 00-00
 start_of_game <- data.frame(running_score = "00-00") 
 
-cleaned_df <- start_of_game %>%
+# builds the game's scoring plays and orders them
+game_sequence_df <- start_of_game %>%
   bind_rows(scoring_df) %>%
-  mutate(action_order = row_number()) %>%
+  mutate(action_order = row_number()) %>% # frames for the animation
   group_by(team, scoring_player) %>%
-  mutate(player_order = row_number()) %>%
+  mutate(player_baskets = row_number()) %>% # player basket counts
   ungroup() 
-
-if (str_detect(page_url, "(TOR)") == TRUE){
-  cleaned_df <- cleaned_df %>%  
-    mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
-           away_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
-           running_score = str_glue("{toronto_score}-{away_score}"),
-           points = as.numeric(points))
-} else {
-  cleaned_df <- cleaned_df %>%  
-    mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
-           away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
-           running_score = str_glue("{toronto_score}-{away_score}"),
-           points = as.numeric(points))
-}
-
-cleaned_df <- cleaned_df %>%  
-  mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
-         away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
-         running_score = str_glue("{toronto_score}-{away_score}"),
-         points = as.numeric(points))
-
-animation_df <- cleaned_df %>%
-  mutate(running_score = factor(running_score, 
-                                levels = .$running_score,
-                                ordered = TRUE),
-         scoring_player = str_wrap(scoring_player, 2))
 ```
 
 ```{r}
+# depending on home or away, extract raptor's score and display on the left side of title
+if (str_detect(page_url, "(TOR)") == TRUE){
+  final_game_sequence_df <- game_sequence_df %>%  
+    mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
+           away_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
+           running_score = str_glue("{toronto_score}-{away_score}"))
+} else {
+  final_game_sequence_df <- game_sequence_df %>%  
+    mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
+           away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
+           running_score = str_glue("{toronto_score}-{away_score}"))
+}
+```
+
+```{r}
+# gotta turn this into a factor so I can use {current_frame} to track boxscore
+animation_df <- final_game_sequence_df %>%
+  mutate(running_score = factor(running_score, 
+                                levels = .$running_score,
+                                ordered = TRUE))
+```
+
+```{r raptors_logo}
+# read the raptors image and make it transparent
 l <- readPNG("~/Downloads/toronto_raptors_logo.png")
 f <- matrix(rgb(l[,,1],l[,,2],l[,,3], l[,,4] * 0.2), nrow=dim(l)[1]) #0.2 is alpha
 raptors_logo <- rasterGrob(f, interpolate=TRUE)
 ```
 
-https://teamcolorcodes.com/nba-team-color-codes/
-
-```{r, warning = FALSE}
-# Raptors Only
+```{r plot_breaks}
+# raptors players only on the x-axis
 x_axis <- animation_df %>% 
   filter(team == "Toronto Raptors") %>% 
   distinct(scoring_player)
+```
 
-  base_plot <- animation_df %>%
-  ggplot(aes(x = scoring_player, y = player_order, group = action_order)) +
+```{r, warning = FALSE}
+base_plot <- animation_df %>%
+  ggplot(aes(x = scoring_player, y = player_baskets, group = action_order)) +
   annotation_custom(raptors_logo, 
                     xmin = -Inf, xmax = Inf, 
                     ymin = -Inf, ymax = Inf)+
   geom_image(aes(image = "~/Downloads/basketball.png"), size = 0.06) +
-  scale_x_discrete(limits = x_axis$scoring_player, 
+  scale_x_discrete("",
+                   limits = x_axis$scoring_player, 
                    labels = str_wrap(x_axis$scoring_player, 2)) +
-  labs(title = paste0("<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:#002B5C'>", opponent, "</b>"),
-       x = "",
-       y = "Baskets") +
+  scale_y_continuous("Baskets",
+                     breaks = seq(0, 25, by = 5)) + 
+  labs(title = paste0("<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:#002B5C'>", opponent, "</b>")) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
-                                      lineheight = 1, vjust = -1, hjust = 0.56)) 
-  # geom_image(data = team_animation_df %>% filter(points == 3), 
-  #            aes(image = "~/Downloads/basketball_red.png"), size = 0.075, asp = 0.5) +
-  # geom_image(data = team_animation_df %>% filter(points == 1), 
-  #            aes(image = "~/Downloads/basketball copy.png"), size = 0.06, asp = 0.5) +
-  # geom_image(data = team_animation_df %>% filter(points == 2), 
-  #            aes(image = "~/Downloads/basketball.png"), size = 0.07, asp = 0.5) 
+                                      lineheight = 1, vjust = -1, hjust = 0.56))
+
+# saving this if I want to make 3 pointers look different
+# geom_image(data = animation_df %>% filter(points == 3), 
+#            aes(image = "~/Downloads/basketball_red.png"), size = 0.06)
 ```
 
 ```{r}
-animate_plot <- function(plot_type = base_plot){
-  plot_type +
-    transition_states(running_score, transition_length = 0.5, state_length = 0.1, wrap = FALSE) +
-    enter_fly(y_loc = 16) +
-    ease_aes(y = "bounce-out") + 
-    shadow_mark()
-}
-
-anim <- animate_plot(base_plot)
+animated_plot <- base_plot +
+  transition_states(running_score, transition_length = 0.5, state_length = 0.1, wrap = FALSE) +
+  enter_fly(y_loc = max(animation_df$player_baskets) + 2) +
+  ease_aes(y = "bounce-out") + 
+  shadow_mark()
 ```
 
 ```{r}
-anim_save(str_glue("animations/raptors_{opponent}-{str_extract(page_url, '[0-9]+')}.gif"), 
-          anim, 
+anim_save(animated_plot,
+          filename = str_glue("animations/raptors_{opponent}-{str_extract(page_url, '[0-9]+')}.gif"), 
           width = 1024, height = 512,
           fps = 25, 
           duration = nrow(animation_df)/3.2, 
           end_pause = 75,
           type = "cairo", 
-          )
+)
 
 beepr::beep()
 ```
