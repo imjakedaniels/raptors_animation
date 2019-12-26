@@ -1,5 +1,5 @@
 ---
-title: "Raptors baskets"
+title: "NBA animated baskets"
 output: html_document
 ---
 
