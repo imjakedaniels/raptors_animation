@@ -20,17 +20,18 @@ loadfonts(device = "pdf", quiet = TRUE)
 theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 ```
 
-# Inputs
+# Input
 
 ```{r page_link}
 page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912250TOR.html"
-
-web_page_data <- read_html(page_url)
 ```
 
 # Scraping
 
 ```{r play_by_play_data}
+# read play-by-play url
+web_page_data <- read_html(page_url)
+
 # scrape the url for tables
 event_info <- web_page_data %>%
   html_table()
@@ -86,7 +87,7 @@ scoring_df <- scoring_plays %>%
          scoring_player = str_remove(paste0(scoring_home_player, scoring_away_player), "(NA)"),
          scoring_player = str_wrap(scoring_player, 2),
          points = as.numeric(str_extract(paste0(home_point_increase, away_point_increase), "[0-9]")),
-         team = ifelse(str_detect(home_action, "[a-z]"), home_team, away_team)) %>%
+         team = ifelse(!str_detect(home_action, "[a-z]"), home_team, away_team)) %>%
   select(scoring_player, points, team, running_score) 
 ```
 
