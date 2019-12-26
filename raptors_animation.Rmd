@@ -116,6 +116,18 @@ f <- matrix(rgb(l[,,1],l[,,2],l[,,3], l[,,4] * 0.2), nrow=dim(l)[1]) #0.2 is alp
 raptors_logo <- rasterGrob(f, interpolate=TRUE)
 ```
 
+```{r opponent_colour}
+# opponent colour from https://teamcolorcodes.com/nba-team-color-codes/
+team_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(opponent, " ", "-")), "-color-codes/")
+
+event_info <- read_html(team_url) %>%
+  html_nodes("body") %>%
+  html_nodes("div") %>%
+  html_text() 
+
+opponent_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
+```
+
 ```{r plot_breaks}
 # raptors players only on the x-axis
 x_axis <- animation_df %>% 
@@ -135,7 +147,7 @@ base_plot <- animation_df %>%
                    labels = str_wrap(x_axis$scoring_player, 2)) +
   scale_y_continuous("Baskets",
                      breaks = seq(0, 25, by = 5)) + 
-  labs(title = paste0("<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:#007A33'>", opponent, "</b>")) +
+  labs(title = paste0("<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:", opponent_colour, "'>", opponent, "</b>")) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
