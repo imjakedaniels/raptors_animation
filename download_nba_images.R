@@ -1,3 +1,5 @@
+library(tidyverse)
+library(rvest)
 # get all the teams off wikipedia
 url <- "https://en.wikipedia.org/wiki/National_Basketball_Association"
 
