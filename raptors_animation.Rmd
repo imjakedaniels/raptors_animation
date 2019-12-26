@@ -68,7 +68,7 @@ scoring_df <- scoring_plays %>%
          scoring_player = str_wrap(scoring_player, 2),
          points = as.numeric(str_extract(paste0(toronto_point_increase, opponent_point_increase), "[0-9]")),
          team = ifelse(str_detect(toronto_action, "[a-z]"), "Toronto Raptors", opponent)) %>%
-  select(scoring_player, points, team, running_score) 
+  select(time, scoring_player, points, team, running_score) 
 ```
 
 # Prep for animation
@@ -92,12 +92,14 @@ if (str_detect(page_url, "(TOR)") == TRUE){
   final_game_sequence_df <- game_sequence_df %>%  
     mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
            away_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
-           running_score = str_glue("{toronto_score}-{away_score}"))
+           running_score = str_glue("{toronto_score}-{away_score}"),
+           running_score = paste0(running_score, "\n", time))
 } else {
   final_game_sequence_df <- game_sequence_df %>%  
     mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
            away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
-           running_score = str_glue("{toronto_score}-{away_score}"))
+           running_score = str_glue("{toronto_score}-{away_score}"),
+           running_score = paste0(running_score, "\n", time))
 }
 ```
 
@@ -135,11 +137,13 @@ base_plot <- animation_df %>%
                    labels = str_wrap(x_axis$scoring_player, 2)) +
   scale_y_continuous("Baskets",
                      breaks = seq(0, 25, by = 5)) + 
-  labs(title = paste0("<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:#007A33'>", opponent, "</b>")) +
+  labs(title = paste0("<b style='color:#BA0C2F'>Toronto Raptors</b> vs. <b style='color:#007A33'>", opponent, "</b>"),
+       subtitle = "{closest_state}") +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
-                                      lineheight = 1, vjust = -1, hjust = 0.56))
+                                      lineheight = 1, vjust = -1, hjust = 0.56),
+        plot.subtitle = element_text(size = 30, hjust = 0.5))
 
 # saving this if I want to make 3 pointers look different
 # geom_image(data = animation_df %>% filter(points == 3), 
