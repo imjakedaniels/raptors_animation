@@ -93,13 +93,13 @@ if (str_detect(page_url, "(TOR)") == TRUE){
     mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
            away_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
            running_score = str_glue("{toronto_score}-{away_score}"),
-           running_score = paste0(running_score, "\n", time))
+           running_score = paste0("<span style='font-size:30pt'>", running_score, "</span>", "<br>", "<span style='font-size:20pt'>", time, "</span>"))
 } else {
   final_game_sequence_df <- game_sequence_df %>%  
     mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
            away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
            running_score = str_glue("{toronto_score}-{away_score}"),
-           running_score = paste0(running_score, "\n", time))
+           running_score = paste0("<span style='font-size:30pt'>", running_score, "</span>", "<br>", "<span style='font-size:20pt'>", time, "</span>"))
 }
 ```
 
@@ -136,36 +136,36 @@ base_plot <- animation_df %>%
                    limits = x_axis$scoring_player, 
                    labels = str_wrap(x_axis$scoring_player, 2)) +
   scale_y_continuous("Baskets",
-                     breaks = seq(0, 25, by = 5)) + 
-  labs(title = paste0("<b style='color:#BA0C2F'>Toronto Raptors</b> vs. <b style='color:#007A33'>", opponent, "</b>"),
+                     breaks = seq(0, 25, by = 5)) +
+  labs(title = paste("<b style='color:#BA0C2F'>Toronto Raptors</b> vs.<b style='color:#007A33'>", opponent, " </b>"),
        subtitle = "{closest_state}") +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
-                                      lineheight = 1, vjust = -1, hjust = 0.56),
-        plot.subtitle = element_text(size = 30, hjust = 0.5))
+                                      lineheight = 1, vjust = -1, hjust = 0.5),
+        plot.subtitle = element_markdown(face = "bold", hjust = 0.5))
 
 # saving this if I want to make 3 pointers look different
 # geom_image(data = animation_df %>% filter(points == 3), 
 #            aes(image = "~/Downloads/basketball_red.png"), size = 0.06)
 ```
 
-```{r}
+```{r, fig.width = 10.24, fig.height = 5.12}
 animated_plot <- base_plot +
   transition_states(running_score, transition_length = 0.5, state_length = 0.1, wrap = FALSE) +
   enter_fly(y_loc = max(animation_df$player_baskets) + 2) +
   ease_aes(y = "bounce-out") + 
-  shadow_mark()
+  shadow_mark(colour = "white")
 ```
 
 ```{r}
 anim_save(animated_plot,
-          filename = str_glue("animations/raptors_{opponent}-{str_extract(page_url, '[0-9]+')}.gif"), 
+          filename = str_glue("animations/raptors_{opponent}-{str_extract(page_url, '[0-9]+')}.gif"),
           width = 1024, height = 512,
-          fps = 25, 
-          duration = nrow(animation_df)/3.2, 
+          fps = 25,
+          duration = nrow(animation_df)/3.2,
           end_pause = 75,
-          type = "cairo", 
+          type = "cairo",
 )
 
 beepr::beep()
