@@ -50,6 +50,102 @@ if (str_detect(page_url, "(TOR)") == TRUE){
 }
 ```
 
+
+```{r scoring_plays}
+scoring_plays_2 <- game_data %>%
+  mutate(toronto_def_rebounds = ifelse(str_detect(toronto_action, "(Defensive rebound)"),
+                                       str_extract(toronto_action, "[A-Z]\\. [A-Za-z-]+"),
+                                       NA_character_),
+         opponent_def_rebounds = ifelse(str_detect(opponent_action, "(Defensive rebound)"),
+                                        str_extract(opponent_action, "[A-Z]\\. [A-Za-z-]+"),
+                                        NA_character_),
+         toronto_action = ifelse(!str_detect(toronto_action, "[a-z]"),
+                                 NA,
+                                 toronto_action),
+         opponent_action = ifelse(!str_detect(opponent_action, "[a-z]"),
+                                  NA,
+                                  opponent_action),
+         player_action = ifelse(is.na(toronto_action),
+                                str_extract(opponent_action, "[A-Z]\\. [A-Za-z-]+"),
+                                str_extract(toronto_action, "[A-Z]\\. [A-Za-z-]+")),
+         team = ifelse(str_detect(toronto_action, "[a-z]"), "Toronto Raptors", opponent)) %>%
+  filter(!is.na(player_action)) %>%
+  mutate(result = case_when(
+    # str_detect(opponent_action, "(Defensive rebound)") | str_detect(toronto_action, "(Defensive rebound)") ~ "Defensive Rebound",
+    # str_detect(opponent_action, "(Offensive rebound)") | str_detect(toronto_action, "(Offensive rebound)") ~ "Offensive Rebound",
+    # str_detect(opponent_action, "(Turnover)") | str_detect(toronto_action, "(Turnover)") ~ "Turnover",
+    str_detect(toronto_action, "(misses)") ~ "Miss",
+    str_detect(toronto_point_increase, "[0-9]") | str_detect(opponent_point_increase, "[0-9]") ~ "Score"
+    )) %>%
+  filter(!is.na(result)) %>%
+  mutate(action_order = row_number())
+
+
+scoring_df <- scoring_plays_2 %>%
+  filter(result == "Score") %>%
+  group_by(player_action) %>%
+  mutate(baskets = row_number())
+
+x_axis <- scoring_plays_2 %>%
+  filter(team == "Toronto Raptors") %>%
+  distinct(player_action)
+
+data_df <- scoring_plays_2 %>%
+  left_join(scoring_df) %>%
+  select(player_action, team, result, time, action_order, baskets, running_score) %>%
+  mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
+         away_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
+         running_score = str_glue("{toronto_score}-{away_score}"),
+         running_score = paste0(running_score, "\n", time))
+
+data_df <- data_df %>%
+         mutate(running_score = factor(running_score,
+                                levels = unique(data_df$running_score),
+                                ordered = TRUE))
+
+test_plot <- data_df %>%
+ggplot(aes(x = player_action, y = baskets, group = action_order)) +
+  annotation_custom(raptors_logo,
+                    xmin = -Inf, xmax = Inf,
+                    ymin = -Inf, ymax = Inf)+
+  # geom_text(data = data_df %>% filter(result == "Turnover" & is.na(team)),
+  #           aes(label = "STEAL", x = 7, y = 15), size = 10) +
+  geom_image(aes(image = "~/Downloads/basketball.png"), size = 0.06) +
+   geom_text(data = data_df %>% filter(result == "Miss" & team == "Toronto Raptors"),
+            aes(label = "*MISS*", x = 2, y = 15), size = 10) +
+  scale_x_discrete("",
+                   limits = x_axis$player_action,
+                   labels = str_wrap(x_axis$player_action, 2)) +
+  scale_y_continuous("Baskets",
+                     breaks = seq(0, 25, by = 5)) +
+  labs(title = paste0("<b style='color:#BA0C2F'>Toronto Raptors</b> vs. <b style='color:#002B5C'>", opponent, "</b>"),
+       subtitle = "{closest_state}") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
+                                      lineheight = 1, vjust = -1, hjust = 0.56),
+        plot.subtitle = element_text(hjust = 0.5))
+
+anim_2 <- test_plot +
+  transition_states(running_score, transition_length = 0.5, state_length = 0.2) +
+  enter_fly(y_loc = max(animation_df$player_baskets) + 2) +
+  ease_aes(y = "bounce-out") +
+  shadow_mark(colour = "white")
+```
+
+```{r}
+
+anim_save(anim_2,
+          filename = str_glue("animations/raptors_2.gif"),
+          width = 1024, height = 512,
+          fps = 20,
+          duration = 40,
+          type = "cairo",
+)
+
+beepr::beep()
+```
+
 ```{r scoring_plays}
 # extract only the scoring plays
 scoring_plays <- game_data %>%
