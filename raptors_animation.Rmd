@@ -25,11 +25,11 @@ theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 You gotta specify these manually for now.
 
 ```{r page_link}
-page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912220TOR.html"
+page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912250TOR.html"
 ```
 
 ```{r opponent}
-opponent <- "Dallas Mavericks"
+opponent <- "Boston Celtics"
 ```
 
 # Cleaning 
@@ -50,14 +50,16 @@ if (str_detect(page_url, "(TOR)") == TRUE){
 }
 ```
 
-```{r clean_data}
+```{r scoring_plays}
 # extract only the scoring plays
 scoring_plays <- game_data %>%
   mutate(toronto_point_increase = str_extract(toronto_point_increase, "[0-9]"),
          opponent_point_increase = str_extract(opponent_point_increase, "[0-9]")) %>%
   filter(!is.na(toronto_point_increase) | !is.na(opponent_point_increase),
          str_detect(running_score, "[0-9]+-[0-9]+"))
+```
 
+```{r player_names}
 # extract player name from action data 
 scoring_df <- scoring_plays %>%
   mutate(scoring_toronto_player = str_extract(toronto_action, "[A-Z]\\. [A-Za-z-]+"),
@@ -133,7 +135,7 @@ base_plot <- animation_df %>%
                    labels = str_wrap(x_axis$scoring_player, 2)) +
   scale_y_continuous("Baskets",
                      breaks = seq(0, 25, by = 5)) + 
-  labs(title = paste0("<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:#002B5C'>", opponent, "</b>")) +
+  labs(title = paste0("<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:#007A33'>", opponent, "</b>")) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
