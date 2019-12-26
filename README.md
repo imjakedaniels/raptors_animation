@@ -2,15 +2,19 @@
 
 ![Example](animations/raptors_clippers-201912110.gif)
 
-I post these animations to [r/TorontoRaptors](https://www.reddit.com/r/torontoraptors/)
+I post these animations to NBA subreddits, like [r/TorontoRaptors](https://www.reddit.com/r/torontoraptors/)
 
 ## Details
 
-I use `gganimate` to drop basketballs — added with `ggimage` — to the corresponding Raptors player when they score.
+This began as a Toronto Raptors only graph. But realized, people like to watch when their team wins so it has been adjusted to glorify the winning team. 
 
-I then use `rvest` to scrape websites for a lot of miscellenous information. The team logos were scraped off Wikipedia, and the Raptors play-by-play data is scraped off basketball-reference.com.
+I use `gganimate` and `ggplot2` to drop basketballs to the winning team's player whenever they score. Emojis were added with `ggimage` to replace the original points in geom_point.
 
-I applied transparency to the images with `png` and added colour to the plot title using `ggtext`. 
+The data is play-by-play data from [basketball-reference.com](https://www.basketball-reference.com/boxscores/pbp/201912250TOR.html). I use `rvest` to scrape the table . I clean it so it knows which team wins and prepares the animation accordingly.
+
+A script is included to download all the team logos off Wikipedia. I recommend using it. I applied the transparency to the team image with `png`.
+
+Finally, I scraped [teamcolorcodes.com](https://teamcolorcodes.com/nba-team-color-codes/) to find the team's main colour and add it to the plot title using `ggtext`.
 
 ## Requirements
 
