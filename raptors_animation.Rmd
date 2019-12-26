@@ -1,5 +1,5 @@
 ---
-title: "Raptors baskets"
+title: "NBA animated baskets"
 output: html_document
 ---
 
@@ -22,56 +22,75 @@ theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 
 # Inputs
 
-You gotta specify these manually for now.
-
 ```{r page_link}
 page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912250TOR.html"
+
+web_page_data <- read_html(page_url)
 ```
 
-```{r opponent}
-opponent <- "Boston Celtics"
-```
+# Scraping
 
-# Cleaning 
-
-```{r get_data}
+```{r play_by_play_data}
 # scrape the url for tables
-event_info <- read_html(page_url) %>%
+event_info <- web_page_data %>%
   html_table()
 
 # extract play-by-play table
 game_data <- as.data.frame(event_info)[-1,]
 
-# check if toronto is the home team and adjust the column names accordingly
-if (str_detect(page_url, "(TOR)") == TRUE){
-  names(game_data) <- c("time", "opponent_action", "opponent_point_increase", "running_score", "toronto_point_increase", "toronto_action")
-} else {
-  names(game_data) <- c("time", "toronto_action", "toronto_point_increase", "running_score", "opponent_point_increase", "opponent_action")
-}
+names(game_data) <- c("time", "away_action", "away_point_increase", 
+                      "running_score", "home_point_increase", "home_action")
 ```
+
+```{r team_data}
+team_id_data <- web_page_data %>%
+  html_nodes("body") %>%
+  html_nodes("strong") %>%
+  html_text() %>%
+  str_trim()
+
+home_team <- team_id_data[2]
+away_team <- team_id_data[3]
+
+final_score_data <- web_page_data %>%
+  html_nodes("body") %>%
+  html_nodes("div.score") %>%
+  html_text() 
+
+final_home_score <- as.numeric(final_score_data[1])
+final_away_score <- as.numeric(final_score_data[2])
+
+box_score <- data.frame(team = c(home_team, away_team),
+                        final_score = as.numeric(c(final_home_score, final_away_score)))
+
+winner <- box_score %>% filter(final_score == max(.$final_score)) %>% .$team %>% as.character()
+loser <- box_score %>% filter(final_score == min(.$final_score)) %>% .$team %>% as.character()
+```
+
+# Cleaning
 
 ```{r scoring_plays}
 # extract only the scoring plays
 scoring_plays <- game_data %>%
-  mutate(toronto_point_increase = str_extract(toronto_point_increase, "[0-9]"),
-         opponent_point_increase = str_extract(opponent_point_increase, "[0-9]")) %>%
-  filter(!is.na(toronto_point_increase) | !is.na(opponent_point_increase),
+  mutate(home_point_increase = str_extract(home_point_increase, "[0-9]"),
+         away_point_increase = str_extract(away_point_increase, "[0-9]")) %>%
+  filter(!is.na(home_point_increase) | !is.na(away_point_increase),
          str_detect(running_score, "[0-9]+-[0-9]+"))
 ```
 
 ```{r player_names}
 # extract player name from action data 
 scoring_df <- scoring_plays %>%
-  mutate(scoring_toronto_player = str_extract(toronto_action, "[A-Z]\\. [A-Za-z-]+"),
-         scoring_opponent_player = str_extract(opponent_action, "[A-Z]\\. [A-Za-z-]+"),
-         scoring_player = str_remove(paste0(scoring_toronto_player, scoring_opponent_player), "(NA)"),
+  mutate(scoring_home_player = str_extract(home_action, "[A-Z]\\. [A-Za-z-]+"),
+         scoring_away_player = str_extract(away_action, "[A-Z]\\. [A-Za-z-]+"),
+         scoring_player = str_remove(paste0(scoring_home_player, scoring_away_player), "(NA)"),
          scoring_player = str_wrap(scoring_player, 2),
-         points = as.numeric(str_extract(paste0(toronto_point_increase, opponent_point_increase), "[0-9]")),
-         team = ifelse(str_detect(toronto_action, "[a-z]"), "Toronto Raptors", opponent)) %>%
+         points = as.numeric(str_extract(paste0(home_point_increase, away_point_increase), "[0-9]")),
+         team = ifelse(str_detect(home_action, "[a-z]"), home_team, away_team)) %>%
   select(scoring_player, points, team, running_score) 
 ```
 
-# Prep for animation
+# Sequencing
 
 ```{r}
 # make the game start at 00-00
@@ -86,18 +105,20 @@ game_sequence_df <- start_of_game %>%
   ungroup() 
 ```
 
+# Building winner on left side
+
 ```{r}
-# depending on home or away, extract raptor's score and display on the left side of title
-if (str_detect(page_url, "(TOR)") == TRUE){
+# winning team is on the left side of the title
+if (home_team == winner){
   final_game_sequence_df <- game_sequence_df %>%  
-    mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
-           away_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
-           running_score = str_glue("{toronto_score}-{away_score}"))
+    mutate(winning_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
+           away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
+           running_score = str_glue("{winning_score}-{away_score}"))
 } else {
   final_game_sequence_df <- game_sequence_df %>%  
-    mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
-           away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
-           running_score = str_glue("{toronto_score}-{away_score}"))
+    mutate(winning_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
+           away_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
+           running_score = str_glue("{winning_score}-{away_score}"))
 }
 ```
 
@@ -109,36 +130,64 @@ animation_df <- final_game_sequence_df %>%
                                 ordered = TRUE))
 ```
 
-```{r raptors_logo}
-# read the raptors image and make it transparent
-l <- readPNG("~/Downloads/toronto_raptors_logo.png")
-f <- matrix(rgb(l[,,1],l[,,2],l[,,3], l[,,4] * 0.2), nrow=dim(l)[1]) #0.2 is alpha
-raptors_logo <- rasterGrob(f, interpolate=TRUE)
+# Getting image
+
+```{r}
+# lookup the team image files
+files <- file.info(list.files(str_glue("{here::here()}/team_images"), 
+                              full.names = TRUE))
+
+image_paths <- data.frame(path = rownames(files))
+
+# look for the winner's image 
+winner_logo <- image_paths %>%
+  mutate_if(is.factor, as.character) %>%
+  filter(str_detect(path, str_extract(winner, "[a-zA-Z]+$")))
+
+# winner logo
+m <- readPNG(winner_logo$path)
+w <- matrix(rgb(m[,,1],m[,,2],m[,,3], m[,,4] * 0.2), nrow=dim(m)[1]) # This makes it transparent - 0.2 is alpha
+winner_logo <- rasterGrob(w, interpolate=TRUE)
+```
+
+# Colours for title from https://teamcolorcodes.com/nba-team-color-codes/
+
+```{r home_colour}
+team_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(winner, " ", "-")), "-color-codes/")
+
+event_info <- read_html(team_url) %>%
+  html_nodes("body") %>%
+  html_nodes("div") %>%
+  html_text()
+
+winner_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
 ```
 
 ```{r opponent_colour}
 # opponent colour from https://teamcolorcodes.com/nba-team-color-codes/
-team_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(opponent, " ", "-")), "-color-codes/")
+team_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(loser, " ", "-")), "-color-codes/")
 
 event_info <- read_html(team_url) %>%
   html_nodes("body") %>%
   html_nodes("div") %>%
   html_text() 
 
-opponent_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
+loser_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
 ```
 
+# Base Plot
+
 ```{r plot_breaks}
-# raptors players only on the x-axis
+# winning team players only on the x-axis
 x_axis <- animation_df %>% 
-  filter(team == "Toronto Raptors") %>% 
+  filter(team == winner) %>% 
   distinct(scoring_player)
 ```
 
 ```{r, warning = FALSE}
 base_plot <- animation_df %>%
   ggplot(aes(x = scoring_player, y = player_baskets, group = action_order)) +
-  annotation_custom(raptors_logo, 
+  annotation_custom(winner_logo, 
                     xmin = -Inf, xmax = Inf, 
                     ymin = -Inf, ymax = Inf)+
   geom_image(aes(image = "~/Downloads/basketball.png"), size = 0.06) +
@@ -147,7 +196,7 @@ base_plot <- animation_df %>%
                    labels = str_wrap(x_axis$scoring_player, 2)) +
   scale_y_continuous("Baskets",
                      breaks = seq(0, 25, by = 5)) + 
-  labs(title = paste0("<b style='color:#BA0C2F'>Toronto Raptors</b> {closest_state} <b style='color:", opponent_colour, "'>", opponent, "</b>")) +
+  labs(title = paste0("<b style='color:", winner_colour, "'>", winner, "</b> {closest_state} <b style='color:", loser_colour, "'>", loser, "</b>")) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
@@ -166,9 +215,13 @@ animated_plot <- base_plot +
   shadow_mark()
 ```
 
+# Saving
+
 ```{r}
+game_date <- str_remove(str_extract(page_url, '[0-9]+'), "0$")
+
 anim_save(animated_plot,
-          filename = str_glue("animations/raptors_{opponent}-{str_extract(page_url, '[0-9]+')}.gif"), 
+          filename = str_glue("animations/{winner}_{loser}-{game_date}.gif"), 
           width = 1024, height = 512,
           fps = 25, 
           duration = nrow(animation_df)/3.2, 
