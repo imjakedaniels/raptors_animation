@@ -67,7 +67,8 @@ scoring_df <- scoring_plays %>%
          scoring_player = str_remove(paste0(scoring_toronto_player, scoring_opponent_player), "(NA)"),
          scoring_player = str_wrap(scoring_player, 2),
          points = as.numeric(str_extract(paste0(toronto_point_increase, opponent_point_increase), "[0-9]")),
-         team = ifelse(str_detect(toronto_action, "[a-z]"), "Toronto Raptors", opponent)) %>%
+         team = ifelse(str_detect(toronto_action, "[a-z]"), "Toronto Raptors", opponent),
+         time = str_remove(time, "\\.0")) %>%
   select(time, scoring_player, points, team, running_score) 
 ```
 
@@ -75,7 +76,7 @@ scoring_df <- scoring_plays %>%
 
 ```{r}
 # make the game start at 00-00
-start_of_game <- data.frame(running_score = "00-00") 
+start_of_game <- data.frame(running_score = "00-00", time = "12:00") 
 
 # builds the game's scoring plays and orders them
 game_sequence_df <- start_of_game %>%
