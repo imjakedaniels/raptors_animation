@@ -86,7 +86,6 @@ scoring_df <- scoring_plays %>%
          scoring_away_player = str_extract(away_action, "[A-Z]\\. [A-Za-z-]+"),
          scoring_player = paste0(scoring_home_player, scoring_away_player),
          scoring_player = str_remove(scoring_player, "(NA)"),
-        # scoring_player = str_wrap(scoring_player, 2),
          points = as.numeric(str_extract(paste0(home_point_increase, away_point_increase), "[0-9]")),
          team = ifelse(str_detect(home_action, "[a-z]"), home_team, away_team)) %>%
   select(scoring_player, points, team, running_score) 
@@ -190,6 +189,22 @@ x_axis <- animation_df %>%
   distinct(scoring_player)
 ```
 
+```{r}
+# see the amount of difference between characters in title and determine which side needs to be balanced out
+if (nchar(winner) < nchar(loser)){
+  white_space_needed <- c(rep("a", times = nchar(loser) - nchar(winner))) %>%
+    str_flatten()
+  
+  centred_title <- paste0("<b style='color:#000000'>", white_space_needed, "</b>", "<b style='color:", winner_colour, "'>", winner, "</b> {closest_state} <b style='color:", loser_colour, "'>", loser, "</b>")
+  
+} else {
+  white_space_needed <- c(rep("a", times = nchar(winner) - nchar(loser))) %>%
+    str_flatten()
+  
+  centred_title <- paste0("<b style='color:", winner_colour, "'>", winner, "</b> {closest_state} <b style='color:", loser_colour, "'>", loser, "</b>", "<b style='color:#000000'>", white_space_needed, "</b>")
+}
+```
+
 ```{r, warning = FALSE}
 base_plot <- animation_df %>%
   ggplot(aes(x = scoring_player, y = player_baskets, group = action_order)) +
@@ -202,7 +217,7 @@ base_plot <- animation_df %>%
                    labels = str_wrap(x_axis$scoring_player, 2)) +
   scale_y_continuous("Baskets",
                      breaks = seq(0, 25, by = 5)) + 
-  labs(title = paste0("<b style='color:", winner_colour, "'>", winner, "</b> {closest_state} <b style='color:", loser_colour, "'>", loser, "</b>")) +
+  labs(title = centred_title) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
