@@ -23,7 +23,7 @@ theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 # Input
 
 ```{r page_link}
-page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912250TOR.html"
+page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912260DET.html"
 ```
 
 # Scraping
@@ -39,8 +39,8 @@ event_info <- web_page_data %>%
 # extract play-by-play table
 game_data <- as.data.frame(event_info)[-1,]
 
-names(game_data) <- c("time", "away_action", "away_point_increase", 
-                      "running_score", "home_point_increase", "home_action")
+names(game_data) <- c("time", "home_action", "home_point_increase", 
+                      "running_score", "away_point_increase", "away_action")
 ```
 
 ```{r team_data}
@@ -84,10 +84,11 @@ scoring_plays <- game_data %>%
 scoring_df <- scoring_plays %>%
   mutate(scoring_home_player = str_extract(home_action, "[A-Z]\\. [A-Za-z-]+"),
          scoring_away_player = str_extract(away_action, "[A-Z]\\. [A-Za-z-]+"),
-         scoring_player = str_remove(paste0(scoring_home_player, scoring_away_player), "(NA)"),
-         scoring_player = str_wrap(scoring_player, 2),
+         scoring_player = paste0(scoring_home_player, scoring_away_player),
+         scoring_player = str_remove(scoring_player, "(NA)"),
+        # scoring_player = str_wrap(scoring_player, 2),
          points = as.numeric(str_extract(paste0(home_point_increase, away_point_increase), "[0-9]")),
-         team = ifelse(!str_detect(home_action, "[a-z]"), home_team, away_team)) %>%
+         team = ifelse(str_detect(home_action, "[a-z]"), home_team, away_team)) %>%
   select(scoring_player, points, team, running_score) 
 ```
 
@@ -112,14 +113,14 @@ game_sequence_df <- start_of_game %>%
 # winning team is on the left side of the title
 if (home_team == winner){
   final_game_sequence_df <- game_sequence_df %>%  
-    mutate(winning_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
-           away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
-           running_score = str_glue("{winning_score}-{away_score}"))
+    mutate(winning_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+"))),
+           loser_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
+           running_score = str_glue("{winning_score}-{loser_score}"))
 } else {
   final_game_sequence_df <- game_sequence_df %>%  
     mutate(winning_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
-           away_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
-           running_score = str_glue("{winning_score}-{away_score}"))
+           loser_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+"))),
+           running_score = str_glue("{winning_score}-{loser_score}"))
 }
 ```
 
@@ -147,13 +148,17 @@ winner_logo <- image_paths %>%
 
 # winner logo
 m <- readPNG(winner_logo$path)
-w <- matrix(rgb(m[,,1],m[,,2],m[,,3], m[,,4] * 0.2), nrow=dim(m)[1]) # This makes it transparent - 0.2 is alpha
+
+# makes it transparent - 0.2 is alpha
+w <- matrix(rgb(m[,,1],m[,,2],m[,,3], m[,,4] * 0.2), nrow=dim(m)[1])
+
 winner_logo <- rasterGrob(w, interpolate=TRUE)
 ```
 
 # Colours for title from https://teamcolorcodes.com/nba-team-color-codes/
 
-```{r home_colour}
+```{r winner_colour}
+# obtain the winning team's colour from https://teamcolorcodes.com/nba-team-color-codes/
 team_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(winner, " ", "-")), "-color-codes/")
 
 event_info <- read_html(team_url) %>%
@@ -164,8 +169,8 @@ event_info <- read_html(team_url) %>%
 winner_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
 ```
 
-```{r opponent_colour}
-# opponent colour from https://teamcolorcodes.com/nba-team-color-codes/
+```{r loser_colour}
+# obtain the losing team's colour from https://teamcolorcodes.com/nba-team-color-codes/
 team_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(loser, " ", "-")), "-color-codes/")
 
 event_info <- read_html(team_url) %>%
@@ -201,7 +206,8 @@ base_plot <- animation_df %>%
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
-                                      lineheight = 1, vjust = -1, hjust = 0.56))
+                                      lineheight = 1, vjust = -1, hjust = 0.56)) +
+  expand_limits(y = 15)
 
 # saving this if I want to make 3 pointers look different
 # geom_image(data = animation_df %>% filter(points == 3), 
@@ -210,7 +216,7 @@ base_plot <- animation_df %>%
 
 ```{r}
 animated_plot <- base_plot +
-  transition_states(running_score, transition_length = 0.5, state_length = 0.1, wrap = FALSE) +
+  transition_states(running_score, transition_length = 0.5, state_length = 0.2, wrap = FALSE) +
   enter_fly(y_loc = max(animation_df$player_baskets) + 2) +
   ease_aes(y = "bounce-out") + 
   shadow_mark()
