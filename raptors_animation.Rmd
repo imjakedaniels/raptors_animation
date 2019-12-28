@@ -6,15 +6,15 @@ output: html_document
 # Setup
 
 ```{r packages, message = FALSE}
-library(tidyverse) # tidyverse
-library(gganimate) # for animating the chart
-library(ggimage) # for inserting the basketballs
-library(rvest) # for scraping websites
+library(tidyverse) # for the basics
+library(gganimate) # for animation and gifs
+library(ggimage) # for inserting the basketball emojis
+library(rvest) # for scraping data from websites
 library(lubridate) # for date manipulation
-library(extrafont) # for nice text
-library(ggtext) # for rendering colour text
-library(png)  # for loading the raptors logo
-library(grid) # for custom ggplot modification
+library(png) # for image manipulation
+library(grid) # for custom plot manipulation
+library(ggtext) # for colouring the plot title
+library(extrafont) # for nicer fonts
 loadfonts(device = "pdf", quiet = TRUE)
 theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 ```
