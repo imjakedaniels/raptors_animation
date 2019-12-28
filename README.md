@@ -1,10 +1,38 @@
-# Animating a basketball game with gganimate
+<h1 style="font-weight:normal" align="center">
+    <img src=https://github.com/imjakedaniels/raptors_animation/blob/master/emoji/basketball.png alt="Zhi" width=27>
+  &nbsp;Visualizing Baskets&nbsp;
+</h1>
 
-![Example](animations/raptors_clippers-201912110.gif)
+<div align="center">
 
-I post these animations to NBA subreddits, like [r/TorontoRaptors](https://www.reddit.com/r/torontoraptors/)
+[Twitter][Twitter] :speech_balloon:&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[LinkedIn][LinkedIn] :necktie:&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[GitHub :octocat:][GitHub]&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[Reddit][Reddit] :link:
+
+</div>
+
+<!--
+Quick Link 
+-->
+
+[Twitter]:https://twitter.com/datajake
+[LinkedIn]:https://www.linkedin.com/in/imjakedaniels/
+[GitHub]:https://github.com/imjakedaniels
+[Reddit]:https://reddit.com/imjakedaniels
+
+## How to scrape & animate a basketball game using `rvest` & `gganimate` 
+
+<p align="center">
+  <img src="https://github.com/imjakedaniels/raptors_animation/blob/master/animations/raptors_clippers-201912110.gif">
+</p>
+
+**Data**: you will need to use play-by-play data sourced from [basketball-reference.com](https://www.basketball-reference.com/boxscores/pbp/201912260OKC.html).
+
+**Notebook**: see the code [here](https://github.com/imjakedaniels/raptors_animation/blob/master/raptors_animation.Rmd).
+
+**In practice**: One of my [popular posts on reddit](https://www.reddit.com/r/torontoraptors/comments/eemlz4/what_a_comeback_vs_dallas/) with 1500+ upvotes
 
 ## Details
+
+I post these animations to NBA subreddits, like [r/TorontoRaptors](https://www.reddit.com/r/torontoraptors/)
 
 This began as a Toronto Raptors only graph. But I realized, people like to watch when their team win, so it has been adjusted to glorify the winning team. Check the issues to see potential improvements I'm working on.
 
@@ -15,7 +43,6 @@ The data is play-by-play data from [basketball-reference.com](https://www.basket
 I scraped [teamcolorcodes.com](https://teamcolorcodes.com/nba-team-color-codes/) to find the team's hex colour code and add it to the plot title using `ggtext`.
 
 Finally, a script is included to download all the team logos off Wikipedia. I recommend using it. I apply the transparency to the team logo in the plot background with `png`.
-
 
 ## Requirements
 
