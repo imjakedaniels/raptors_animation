@@ -13,7 +13,6 @@ library(rvest) # for scraping websites
 library(lubridate) # for date manipulation
 library(extrafont) # for nice text
 library(ggtext) # for rendering colour text
-library(ggrepel) 
 library(png)  # for loading the raptors logo
 library(grid) # for custom ggplot modification
 loadfonts(device = "pdf", quiet = TRUE)
