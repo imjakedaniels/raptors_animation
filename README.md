@@ -3,21 +3,6 @@
   &nbsp;Visualizing Baskets&nbsp;
 </h1>
 
-<div align="center">
-
-[Twitter][Twitter] :speech_balloon:&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[LinkedIn][LinkedIn] :necktie:&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[GitHub :octocat:][GitHub]&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[Reddit][Reddit] :link:
-
-</div>
-
-<!--
-Quick Link 
--->
-
-[Twitter]:https://twitter.com/datajake
-[LinkedIn]:https://www.linkedin.com/in/imjakedaniels/
-[GitHub]:https://github.com/imjakedaniels
-[Reddit]:https://reddit.com/imjakedaniels
-
 ## How to scrape & animate a basketball game using `rvest` & `gganimate` 
 
 <p align="center">
@@ -28,13 +13,17 @@ Quick Link
 
 **Notebook**: see the code [here](https://github.com/imjakedaniels/raptors_animation/blob/master/raptors_animation.Rmd).
 
-**In practice**: One of my [popular posts on reddit](https://www.reddit.com/r/torontoraptors/comments/eemlz4/what_a_comeback_vs_dallas/) with 1500+ upvotes
+**In practice**: One of my [popular posts on reddit](https://www.reddit.com/r/torontoraptors/comments/eemlz4/what_a_comeback_vs_dallas/) with 1500+ upvotes.
 
 ## Details
 
 I post these animations to NBA subreddits, like [r/TorontoRaptors](https://www.reddit.com/r/torontoraptors/)
 
-This began as a Toronto Raptors only graph. But I realized, people like to watch when their team win, so it has been adjusted to glorify the winning team. Check the issues to see potential improvements I'm working on.
+This began as a Toronto Raptors only graph. But I realized, people like to watch when their team win, so it has been adjusted to take any game's data and glorify the winning team. 
+
+Feel free to check the [issues](https://github.com/imjakedaniels/raptors_animation/issues) to see potential improvements I'm working on.
+
+## Description
 
 I use `ggplot2` to create the base plot. Emojis were added with `ggimage` to replace the original points in geom_point. I then use `gganimate` to follow the scoring plays and drop basketballs on the winning team's player whenever they get a basket. 
 
@@ -61,3 +50,20 @@ library(extrafont) # for nicer fonts
 ## See more 
 
 See more animations in the /animations folder.
+
+## Connect with me 
+
+<div align="center">
+
+[Twitter][Twitter] :speech_balloon:&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[LinkedIn][LinkedIn] :necktie:&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[GitHub :octocat:][GitHub]&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[Reddit][Reddit] :link:
+
+</div>
+
+<!--
+Quick Link 
+-->
+
+[Twitter]:https://twitter.com/datajake
+[LinkedIn]:https://www.linkedin.com/in/imjakedaniels/
+[GitHub]:https://github.com/imjakedaniels
+[Reddit]:https://www.reddit.com/user/imjakedaniels
