@@ -27,7 +27,7 @@ Feel free to check the [issues](https://github.com/imjakedaniels/raptors_animati
 
 I use `ggplot2` to create the base plot. Emojis were added with `ggimage` which simply replace the points in a geom_point call. I then use `gganimate` to follow scoring plays and drop basketballs on the winning team's player whenever they get a basket.
 
-The data is play-by-play (pbp) data from [basketball-reference.com](https://www.basketball-reference.com/boxscores/pbp/201912250TOR.html). I use `rvest` to scrape the pbp table . I extract player names and filter for scoring plays only. I also use conditional logic so it knows which team wins so it prepares the title, logo, and animation accordingly.
+The data is play-by-play (pbp) data from [basketball-reference.com](https://www.basketball-reference.com/boxscores/pbp/201912250TOR.html). I use `rvest` to scrape the pbp table. I extract player names and filter for scoring plays only. I also use conditional logic so it knows which team wins and it prepares the title, logo, and animation accordingly.
 
 The notebook will scrape [teamcolorcodes.com](https://teamcolorcodes.com/nba-team-color-codes/) to find the team's hex colour code and add it to the plot title using `ggtext`.
 
