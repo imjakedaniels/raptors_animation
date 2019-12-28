@@ -211,7 +211,7 @@ base_plot <- animation_df %>%
   annotation_custom(winner_logo, 
                     xmin = -Inf, xmax = Inf, 
                     ymin = -Inf, ymax = Inf)+
-  geom_image(aes(image = "~/Downloads/basketball.png"), size = 0.06) +
+  geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.06) +
   scale_x_discrete("",
                    limits = x_axis$scoring_player, 
                    labels = str_wrap(x_axis$scoring_player, 2)) +
