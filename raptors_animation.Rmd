@@ -204,12 +204,13 @@ if (nchar(winner) < nchar(loser)){
 }
 ```
 
-```{r, warning = FALSE, fig.width = 10.24, fig.height= 5.12}
+```{r, warning = FALSE, dev = "CairoPNG", fig.width = 10.24, fig.height= 5.12, dpi = 300}
 base_plot <- animation_df %>%
   ggplot(aes(x = scoring_player, y = player_baskets, group = action_order)) +
   annotation_custom(winner_logo, 
                     xmin = -Inf, xmax = Inf, 
-                    ymin = -Inf, ymax = Inf)+
+                    ymin = -Inf, ymax = Inf) +
+  # geom_point(data = animation_df %>% filter(points == 3), shape = 21, size = 20, fill = winner_colour, colour = "black") +
   geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.06) +
   scale_x_discrete("",
                    limits = x_axis$scoring_player, 
@@ -222,15 +223,11 @@ base_plot <- animation_df %>%
         plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
                                       lineheight = 1, vjust = 0, hjust = 0.5)) +
   expand_limits(y = 15)
-
-# saving this if I want to make 3 pointers look different
-# geom_image(data = animation_df %>% filter(points == 3), 
-#            aes(image = "~/Downloads/basketball_red.png"), size = 0.06)
 ```
 
-```{r}
+```{r, dpi = 300}
 animated_plot <- base_plot +
-  transition_states(running_score, transition_length = 0.5, state_length = 0.2, wrap = FALSE) +
+  transition_states(running_score, transition_length = 0.8, state_length = 0.3, wrap = FALSE) +
   enter_fly(y_loc = max(animation_df$player_baskets) + 2) +
   ease_aes(y = "bounce-out") + 
   shadow_mark()
@@ -238,15 +235,16 @@ animated_plot <- base_plot +
 
 # Saving
 
-```{r}
+```{r, dpi = 300}
 game_date <- str_remove(str_extract(page_url, '[0-9]+'), "0$")
 
 anim_save(animated_plot,
           filename = str_glue("animations/{winner}_{loser}-{game_date}.gif"), 
           width = 1024, height = 512,
-          fps = 25, 
-          duration = nrow(animation_df)/3, 
-          end_pause = 75
+          fps = 30, 
+          duration = round(nrow(animation_df)/3), 
+          end_pause = 90,
+          type = "cairo-png"
 )
 
 beepr::beep()
