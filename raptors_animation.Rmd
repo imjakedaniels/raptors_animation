@@ -86,7 +86,8 @@ scoring_df <- scoring_plays %>%
          scoring_player = paste0(scoring_home_player, scoring_away_player),
          scoring_player = str_remove(scoring_player, "(NA)"),
          points = as.numeric(str_extract(paste0(home_point_increase, away_point_increase), "[0-9]")),
-         team = ifelse(str_detect(home_action, "[a-z]"), home_team, away_team)) %>%
+         team = ifelse(str_detect(home_action, "[a-z]"), home_team, away_team),
+         time = str_remove(time, "\\.0")) %>%
   select(time, scoring_player, points, team, running_score) 
 ```
 
