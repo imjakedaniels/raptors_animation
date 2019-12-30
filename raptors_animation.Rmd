@@ -218,7 +218,7 @@ base_plot <- animation_df %>%
   annotation_custom(winner_logo, 
                     xmin = -Inf, xmax = Inf, 
                     ymin = -Inf, ymax = Inf) +
-  geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.06) +
+  geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.065) +
   # geom_point(data = animation_df %>% filter(points == 3), alpha = 0.4, shape = 21, size = 8, fill = winner_colour, colour = "black") +
   scale_x_discrete("",
                    limits = x_axis$scoring_player, 
