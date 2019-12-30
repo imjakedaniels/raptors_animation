@@ -77,10 +77,12 @@ scoring_df <- scoring_plays %>%
 ```{r}
 # make the game start at 00-00
 start_of_game <- data.frame(running_score = "00-00", time = "12:00") 
+end_of_game <- data.frame(running_score = tail(scoring_df$running_score, 1), time = "0:00")
 
 # builds the game's scoring plays and orders them
 game_sequence_df <- start_of_game %>%
   bind_rows(scoring_df) %>%
+  bind_rows(end_of_game) %>%
   mutate(action_order = row_number()) %>% # frames for the animation
   group_by(team, scoring_player) %>%
   mutate(player_baskets = row_number()) %>% # player basket counts
@@ -100,7 +102,7 @@ if (str_detect(page_url, "(TOR)") == TRUE){
     mutate(toronto_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+") )),
            away_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$") )),
            running_score = str_glue("{toronto_score}-{away_score}"),
-           running_score = paste0("<span style='font-size:30pt'>", running_score, "</span>", "<br>", "<span style='font-size:20pt'>", time, "</span>"))
+           running_score = paste0("<span style='font-size:45pt'>", running_score, "</span>", "<br>", "<span style='font-size:20pt'>", time, "</span>"))
 }
 ```
 
