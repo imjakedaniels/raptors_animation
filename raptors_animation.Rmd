@@ -22,7 +22,7 @@ theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 # Input
 
 ```{r page_link}
-page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912280BOS.html"
+page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912290TOR.html"
 ```
 
 # Scraping
@@ -38,8 +38,8 @@ event_info <- web_page_data %>%
 # extract play-by-play table
 game_data <- as.data.frame(event_info)[-1,]
 
-names(game_data) <- c("time", "home_action", "home_point_increase", 
-                      "running_score", "away_point_increase", "away_action")
+names(game_data) <- c("time", "away_action", "away_point_increase", 
+                      "running_score", "home_point_increase", "home_action")
 ```
 
 ```{r team_data}
@@ -49,16 +49,16 @@ team_id_data <- web_page_data %>%
   html_text() %>%
   str_trim()
 
-home_team <- team_id_data[2]
-away_team <- team_id_data[3]
+away_team <- team_id_data[2]
+home_team <- team_id_data[3]
 
 final_score_data <- web_page_data %>%
   html_nodes("body") %>%
   html_nodes("div.score") %>%
   html_text() 
 
-final_home_score <- as.numeric(final_score_data[1])
-final_away_score <- as.numeric(final_score_data[2])
+final_away_score <- as.numeric(final_score_data[1])
+final_home_score <- as.numeric(final_score_data[2])
 
 box_score <- data.frame(team = c(home_team, away_team),
                         final_score = as.numeric(c(final_home_score, final_away_score)))
@@ -227,7 +227,7 @@ base_plot <- animation_df %>%
 
 ```{r, dpi = 300}
 animated_plot <- base_plot +
-  transition_states(running_score, transition_length = 0.8, state_length = 0.3, wrap = FALSE) +
+  transition_states(running_score, transition_length = 0.8, state_length = 0.1, wrap = FALSE) +
   enter_fly(y_loc = max(animation_df$player_baskets) + 2) +
   ease_aes(y = "bounce-out") + 
   shadow_mark()
