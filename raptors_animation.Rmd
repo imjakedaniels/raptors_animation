@@ -87,23 +87,26 @@ scoring_df <- scoring_plays %>%
          scoring_player = str_remove(scoring_player, "(NA)"),
          points = as.numeric(str_extract(paste0(home_point_increase, away_point_increase), "[0-9]")),
          team = ifelse(str_detect(home_action, "[a-z]"), home_team, away_team)) %>%
-  select(scoring_player, points, team, running_score) 
+  select(time, scoring_player, points, team, running_score) 
 ```
 
 # Sequencing
 
 ```{r}
 # make the game start at 00-00
-start_of_game <- data.frame(running_score = "00-00") 
+start_of_game <- data.frame(running_score = "00-00", time = "12:00") 
+end_of_game <- data.frame(running_score = tail(scoring_df$running_score, 1), time = "0:00")
 
 # builds the game's scoring plays and orders them
 game_sequence_df <- start_of_game %>%
   bind_rows(scoring_df) %>%
+  bind_rows(end_of_game) %>%
   mutate(action_order = row_number()) %>% # frames for the animation
   group_by(team, scoring_player) %>%
   mutate(player_baskets = row_number()) %>% # player basket counts
   ungroup() 
 ```
+
 
 # Building winner on left side
 
@@ -111,14 +114,18 @@ game_sequence_df <- start_of_game %>%
 # winning team is on the left side of the title
 if (home_team == winner){
   final_game_sequence_df <- game_sequence_df %>%  
-    mutate(winning_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+"))),
-           loser_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
-           running_score = str_glue("{winning_score}-{loser_score}"))
-} else {
-  final_game_sequence_df <- game_sequence_df %>%  
     mutate(winning_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
            loser_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+"))),
-           running_score = str_glue("{winning_score}-{loser_score}"))
+           running_score = str_glue("{winning_score}-{loser_score}"),
+           running_score = paste0("<span style='font-size:45pt'>", running_score, "</span>", "<br>", 
+                                  "<span style='font-size:20pt'>", time, "</span>"))
+} else {
+  final_game_sequence_df <- game_sequence_df %>%  
+    mutate(winning_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+"))),
+           loser_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
+           running_score = str_glue("{winning_score}-{loser_score}"),
+           running_score = paste0("<span style='font-size:40pt'>", running_score, "</span>", "<br>", 
+                                  "<span style='font-size:25pt'>", time, "</span>"))
 }
 ```
 
@@ -140,12 +147,13 @@ files <- file.info(list.files(str_glue("{here::here()}/team_images"),
 image_paths <- data.frame(path = rownames(files))
 
 # look for the winner's image 
-winner_logo <- image_paths %>%
+winner_path <- image_paths %>%
   mutate_if(is.factor, as.character) %>%
-  filter(str_detect(path, str_extract(winner, "[a-zA-Z]+$")))
+  filter(str_detect(path, str_extract(winner, "[a-zA-Z]+$"))) %>%
+  .$path
 
 # winner logo
-m <- readPNG(winner_logo$path)
+m <- readPNG(winner_path)
 
 # makes it transparent - 0.2 is alpha
 w <- matrix(rgb(m[,,1],m[,,2],m[,,3], m[,,4] * 0.2), nrow=dim(m)[1])
@@ -189,18 +197,33 @@ x_axis <- animation_df %>%
 ```
 
 ```{r}
-# see the amount of difference between characters in title and determine which side needs to be balanced out
+# # see the amount of difference between characters in title and determine which side needs to be balanced out
+# if (nchar(winner) < nchar(loser)){
+#   white_space_needed <- c(rep("a", times = nchar(loser) - nchar(winner))) %>%
+#     str_flatten()
+#   
+#   centred_title <- paste0("<b style='color:#ffffff'>", white_space_needed, "</b>", "<b style='color:", winner_colour, "'>", winner, "</b> {closest_state} <b style='color:", loser_colour, "'>", loser, "</b>")
+#   
+# } else {
+#   white_space_needed <- c(rep("a", times = nchar(winner) - nchar(loser))) %>%
+#     str_flatten()
+#   
+#   centred_title <- paste0("<b style='color:", winner_colour, "'>", winner, "</b> {closest_state} <b style='color:", loser_colour, "'>", loser, "</b>", "<b style='color:#ffffff>", white_space_needed, "</b>")
+# }
+```
+
+```{r}
 if (nchar(winner) < nchar(loser)){
   white_space_needed <- c(rep("a", times = nchar(loser) - nchar(winner))) %>%
     str_flatten()
   
-  centred_title <- paste0("<b style='color:#ffffff'>", white_space_needed, "</b>", "<b style='color:", winner_colour, "'>", winner, "</b> {closest_state} <b style='color:", loser_colour, "'>", loser, "</b>")
+  centred_title <- paste0("<b style='color:#ffffff'>", white_space_needed, "</b>", "<b style='color:", winner_colour, "'>", winner, "</b>", " def. ", "<b style='color:", loser_colour, "'>", loser, "</b>")
   
 } else {
   white_space_needed <- c(rep("a", times = nchar(winner) - nchar(loser))) %>%
     str_flatten()
   
-  centred_title <- paste0("<b style='color:", winner_colour, "'>", winner, "</b> {closest_state} <b style='color:", loser_colour, "'>", loser, "</b>", "<b style='color:#ffffff>", white_space_needed, "</b>")
+  centred_title <- paste0("<b style='color:", winner_colour, "'>", winner, "</b>", " def. ", "<b style='color:", loser_colour, "'>", loser, "</b>", "<b style='color:#ffffff>", white_space_needed, "</b>")
 }
 ```
 
@@ -210,18 +233,20 @@ base_plot <- animation_df %>%
   annotation_custom(winner_logo, 
                     xmin = -Inf, xmax = Inf, 
                     ymin = -Inf, ymax = Inf) +
-  # geom_point(data = animation_df %>% filter(points == 3), shape = 21, size = 20, fill = winner_colour, colour = "black") +
+  geom_point(data = animation_df %>% filter(points == 3), shape = 21, size = 18, fill = winner_colour, colour = "black") +
   geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.06) +
   scale_x_discrete("",
                    limits = x_axis$scoring_player, 
                    labels = str_wrap(x_axis$scoring_player, 2)) +
   scale_y_continuous("Baskets",
                      breaks = seq(0, 25, by = 5)) + 
-  labs(title = centred_title) +
+  labs(title = centred_title,
+       subtitle = "{closest_state}") +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        plot.title = element_markdown(size = 45, face = "bold", colour = "#000000",
-                                      lineheight = 1, vjust = 0, hjust = 0.5)) +
+        plot.title = element_markdown(size = 40, face = "bold", colour = "#000000",
+                                      lineheight = 1, vjust = -1, hjust = 0.5),
+        plot.subtitle = element_markdown(face = "bold", hjust = 0.5)) +
   expand_limits(y = 15)
 ```
 
