@@ -96,7 +96,7 @@ scoring_df <- scoring_plays %>%
 ```{r}
 # make the game start at 00-00
 start_of_game <- data.frame(running_score = "00-00", time = "12:00") 
-end_of_game <- data.frame(running_score = tail(scoring_df$running_score, 1), time = "0:00")
+end_of_game <- data.frame(running_score = tail(scoring_df$running_score, 1), time = "Final")
 
 # builds the game's scoring plays and orders them
 game_sequence_df <- start_of_game %>%
@@ -198,22 +198,6 @@ x_axis <- animation_df %>%
 ```
 
 ```{r}
-# # see the amount of difference between characters in title and determine which side needs to be balanced out
-# if (nchar(winner) < nchar(loser)){
-#   white_space_needed <- c(rep("a", times = nchar(loser) - nchar(winner))) %>%
-#     str_flatten()
-#   
-#   centred_title <- paste0("<b style='color:#ffffff'>", white_space_needed, "</b>", "<b style='color:", winner_colour, "'>", winner, "</b> {closest_state} <b style='color:", loser_colour, "'>", loser, "</b>")
-#   
-# } else {
-#   white_space_needed <- c(rep("a", times = nchar(winner) - nchar(loser))) %>%
-#     str_flatten()
-#   
-#   centred_title <- paste0("<b style='color:", winner_colour, "'>", winner, "</b> {closest_state} <b style='color:", loser_colour, "'>", loser, "</b>", "<b style='color:#ffffff>", white_space_needed, "</b>")
-# }
-```
-
-```{r}
 if (nchar(winner) < nchar(loser)){
   white_space_needed <- c(rep("a", times = nchar(loser) - nchar(winner))) %>%
     str_flatten()
@@ -234,8 +218,8 @@ base_plot <- animation_df %>%
   annotation_custom(winner_logo, 
                     xmin = -Inf, xmax = Inf, 
                     ymin = -Inf, ymax = Inf) +
-  geom_point(data = animation_df %>% filter(points == 3), shape = 21, size = 18, fill = winner_colour, colour = "black") +
   geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.06) +
+  # geom_point(data = animation_df %>% filter(points == 3), alpha = 0.4, shape = 21, size = 8, fill = winner_colour, colour = "black") +
   scale_x_discrete("",
                    limits = x_axis$scoring_player, 
                    labels = str_wrap(x_axis$scoring_player, 2)) +
