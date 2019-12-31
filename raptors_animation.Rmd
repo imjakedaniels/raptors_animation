@@ -213,13 +213,15 @@ if (nchar(winner) < nchar(loser)){
 ```
 
 ```{r, warning = FALSE, dev = "CairoPNG", fig.width = 10.24, fig.height= 5.12, dpi = 300}
-base_plot <- animation_df %>%
+(base_plot <- animation_df %>%
   ggplot(aes(x = scoring_player, y = player_baskets, group = action_order)) +
   annotation_custom(winner_logo, 
                     xmin = -Inf, xmax = Inf, 
                     ymin = -Inf, ymax = Inf) +
   geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.065) +
-  # geom_point(data = animation_df %>% filter(points == 3), alpha = 0.4, shape = 21, size = 8, fill = winner_colour, colour = "black") +
+  geom_image(data = animation_df %>% filter(points == 3), 
+             aes(image = str_glue("~/Downloads/flame_ring_copy.png")), size = 0.068) +
+  geom_text(data = animation_df %>% filter(points == 1), aes(label = "—"), size = 13, colour = "black", alpha = 0.5, nudge_y = 0.05) +
   scale_x_discrete("",
                    limits = x_axis$scoring_player, 
                    labels = str_wrap(x_axis$scoring_player, 2)) +
@@ -232,7 +234,7 @@ base_plot <- animation_df %>%
         plot.title = element_markdown(size = 40, face = "bold", colour = "#000000",
                                       lineheight = 1, vjust = -1, hjust = 0.5),
         plot.subtitle = element_markdown(face = "bold", hjust = 0.5)) +
-  expand_limits(y = 15)
+  expand_limits(y = 15))
 ```
 
 ```{r, dpi = 300}
@@ -251,7 +253,7 @@ game_date <- str_remove(str_extract(page_url, '[0-9]+'), "0$")
 anim_save(animated_plot,
           filename = str_glue("animations/{winner}_{loser}-{game_date}.gif"), 
           width = 1024, height = 512,
-          fps = 30, 
+          fps = 10, 
           duration = round(nrow(animation_df)/3), 
           end_pause = 90,
           type = "cairo-png"
