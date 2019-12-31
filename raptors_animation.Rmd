@@ -91,6 +91,15 @@ scoring_df <- scoring_plays %>%
   select(time, scoring_player, points, team, running_score) 
 ```
 
+# Cumulating points
+
+```{r}
+full_scoring_df <- scoring_df %>%
+  group_by(scoring_player) %>%
+  mutate(running_point_total = cumsum(points))
+```
+
+
 # Sequencing
 
 ```{r}
@@ -100,7 +109,7 @@ end_of_game <- data.frame(running_score = tail(scoring_df$running_score, 1), tim
 
 # builds the game's scoring plays and orders them
 game_sequence_df <- start_of_game %>%
-  bind_rows(scoring_df) %>%
+  bind_rows(full_scoring_df) %>%
   bind_rows(end_of_game) %>%
   mutate(action_order = row_number()) %>% # frames for the animation
   group_by(team, scoring_player) %>%
@@ -198,6 +207,23 @@ x_axis <- animation_df %>%
 ```
 
 ```{r}
+# upper limit
+upper_y_limit <- max(animation_df %>% 
+      filter(team == winner) %>% 
+      select(player_baskets)) + 1
+```
+
+
+```{r}
+# scores on final frame
+final_frame_scores <- animation_df %>% 
+  group_by(scoring_player) %>% 
+  filter(running_point_total == max(running_point_total)) %>% 
+  ungroup() %>% 
+  mutate(running_score = tail(.$running_score, 1))
+```
+
+```{r}
 if (nchar(winner) < nchar(loser)){
   white_space_needed <- c(rep("a", times = nchar(loser) - nchar(winner))) %>%
     str_flatten()
@@ -214,32 +240,33 @@ if (nchar(winner) < nchar(loser)){
 
 ```{r, warning = FALSE, dev = "CairoPNG", fig.width = 10.24, fig.height= 5.12, dpi = 300}
 (base_plot <- animation_df %>%
-  ggplot(aes(x = scoring_player, y = player_baskets, group = action_order)) +
-  annotation_custom(winner_logo, 
-                    xmin = -Inf, xmax = Inf, 
-                    ymin = -Inf, ymax = Inf) +
-  geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.065) +
-  geom_image(data = animation_df %>% filter(points == 3), 
-             aes(image = str_glue("~/Downloads/flame_ring_copy.png")), size = 0.068) +
-  geom_text(data = animation_df %>% filter(points == 1), aes(label = "—"), size = 13, colour = "black", alpha = 0.5, nudge_y = 0.05) +
-  scale_x_discrete("",
-                   limits = x_axis$scoring_player, 
-                   labels = str_wrap(x_axis$scoring_player, 2)) +
-  scale_y_continuous("Baskets",
-                     breaks = seq(0, 25, by = 5)) + 
-  labs(title = centred_title,
-       subtitle = "{closest_state}") +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        plot.title = element_markdown(size = 40, face = "bold", colour = "#000000",
-                                      lineheight = 1, vjust = -1, hjust = 0.5),
-        plot.subtitle = element_markdown(face = "bold", hjust = 0.5)) +
-  expand_limits(y = 15))
+   ggplot(aes(x = scoring_player, y = player_baskets, group = action_order)) +
+   annotation_custom(winner_logo, 
+                     xmin = -Inf, xmax = Inf, 
+                     ymin = -Inf, ymax = Inf) +
+   geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.065) +
+   geom_image(data = animation_df %>% filter(points == 3), 
+              aes(image = str_glue("~/Downloads/flame_ring_copy.png")), size = 0.065) +
+   # geom_text(data = animation_df %>% filter(points == 1), aes(label = "—"), size = 13, colour = "black", alpha = 0.5, nudge_y = 0.05) +
+   geom_text(data = final_frame_scores, aes(label = running_point_total), nudge_y = 1.5) +
+   scale_x_discrete("",
+                    limits = x_axis$scoring_player, 
+                    labels = str_wrap(x_axis$scoring_player, 2)) +
+   scale_y_continuous("Baskets",
+                      breaks = seq(0, 25, by = 5)) + 
+   labs(title = centred_title,
+        subtitle = "{closest_state}") +
+   theme(panel.grid.major = element_blank(),
+         panel.grid.minor = element_blank(),
+         plot.title = element_markdown(size = 40, face = "bold", colour = "#000000",
+                                       lineheight = 1, vjust = -1, hjust = 0.5),
+         plot.subtitle = element_markdown(face = "bold", hjust = 0.5)) +
+   expand_limits(y = upper_y_limit))
 ```
 
 ```{r, dpi = 300}
 animated_plot <- base_plot +
-  transition_states(running_score, transition_length = 0.8, state_length = 0.1, wrap = FALSE) +
+  transition_states(running_score, transition_length = 0.8, state_length = 0.2, wrap = FALSE) +
   enter_fly(y_loc = max(animation_df$player_baskets) + 2) +
   ease_aes(y = "bounce-out") + 
   shadow_mark()
@@ -253,9 +280,9 @@ game_date <- str_remove(str_extract(page_url, '[0-9]+'), "0$")
 anim_save(animated_plot,
           filename = str_glue("animations/{winner}_{loser}-{game_date}.gif"), 
           width = 1024, height = 512,
-          fps = 10, 
+          fps = 30, 
           duration = round(nrow(animation_df)/3), 
-          end_pause = 90,
+          end_pause = 150,
           type = "cairo-png"
 )
 
