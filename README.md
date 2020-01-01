@@ -3,17 +3,17 @@
   &nbsp;Visualizing Baskets&nbsp;
 </h1>
 
-## How to scrape & animate a basketball game using `rvest` & `gganimate` 
+## Scraping & animating a basketball game using `{rvest}` & `{gganimate}` 
 
 <p align="center">
-  <img src="https://github.com/imjakedaniels/raptors_animation/blob/master/animations/raptors_clippers-201912110.gif">
+  <img src="https://github.com/imjakedaniels/raptors_animation/blob/master/animations/Toronto Raptors_Cleveland Cavaliers-20191231.gif">
 </p>
 
-**Data**: you will need to use play-by-play data sourced from [basketball-reference.com](https://www.basketball-reference.com/boxscores/pbp/201912260OKC.html).
+**Data**: all you will need is play-by-play data sourced from [basketball-reference.com](https://www.basketball-reference.com/boxscores/pbp/201912260OKC.html).
 
-**Notebook**: see the code [here](https://github.com/imjakedaniels/raptors_animation/blob/master/raptors_animation.Rmd).
+**Notebook**: the graph is created using RMarkdown. See the code [here](https://github.com/imjakedaniels/raptors_animation/blob/master/raptors_animation.Rmd).
 
-**In practice**: One of my [popular posts on reddit](https://www.reddit.com/r/torontoraptors/comments/eemlz4/what_a_comeback_vs_dallas/) with 1500+ upvotes.
+**In practice**: One of my [popular posts on reddit](https://www.reddit.com/r/torontoraptors/comments/eemlz4/what_a_comeback_vs_dallas/) with 1500+ upvotes. This was Version 1.0.
 
 ## Details
 
@@ -25,15 +25,17 @@ Feel free to check the [issues](https://github.com/imjakedaniels/raptors_animati
 
 ## Walkthrough
 
-I use `ggplot2` to create the base plot. Emojis were added with `ggimage` which simply replace the points in a geom_point call. I then use `gganimate` to follow scoring plays and drop basketballs on the winning team's player whenever they get a basket.
+I use `{ggplot2}` to create the base plot. Emojis were added with `{ggimage}` which simply replace the points in a `geom_point` call. I create the sequence of events using `{running_score} + {time}` for `{gganimate}` to follow. The animation will drop basketballs on the winning team's player whenever they get a basket. Three pointers are highlighted with flames. The final frame is added to display point totals from each player and remains still for 5 seconds.
 
-The data is play-by-play (pbp) data from [basketball-reference.com](https://www.basketball-reference.com/boxscores/pbp/201912250TOR.html). I use `rvest` to scrape the pbp table. I extract player names and filter for scoring plays only. I also use conditional logic so it knows which team wins and it prepares the title, logo, and animation accordingly.
+The data is play-by-play (pbp) data from [basketball-reference.com](https://www.basketball-reference.com/boxscores/pbp/201912250TOR.html). I use `rvest` to scrape the pbp table. I extract player names and filter for scoring plays only. I also use conditional logic so it knows which team wins and it prepares the title, logo, and animation accordingly. 
 
-The notebook will scrape [teamcolorcodes.com](https://teamcolorcodes.com/nba-team-color-codes/) to find the team's hex colour code and add it to the plot title using `ggtext`.
+The notebook will then scrape [teamcolorcodes.com](https://teamcolorcodes.com/nba-team-color-codes/) to find the team's hex colour code and add it to the plot title using `{ggtext}`.
 
-Finally, it applies transparency to the team logo in the plot background with `png`.
+Finally, it applies transparency to the team logo in the plot background with `{png}`.
 
-See [notebook](https://github.com/imjakedaniels/raptors_animation/blob/master/raptors_animation.Rmd) for more details
+See [notebook](https://github.com/imjakedaniels/raptors_animation/blob/master/raptors_animation.Rmd) for all the code used.
+
+Please leave a star if you like it.
 
 ## Requirements
 
@@ -52,10 +54,6 @@ library(extrafont) # for nicer fonts
 ## See more 
 
 See more animations in the /animations folder.
-
-## Connect with me 
-
-<div align="center">
 
 [Twitter][Twitter] :speech_balloon:&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[LinkedIn][LinkedIn] :necktie:&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[GitHub :octocat:][GitHub]&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;[Reddit][Reddit] :link:
 
