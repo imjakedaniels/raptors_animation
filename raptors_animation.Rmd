@@ -22,14 +22,18 @@ theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 # Input
 
 ```{r page_link}
-page_url <- "https://www.basketball-reference.com/boxscores/pbp/201912310TOR.html"
+page_url <- "https://www.basketball-reference.com/boxscores/pbp/202001080CHO.html"
+
+team_of_interest <- "Toronto Raptors"
 ```
 
 # Scraping
 
 ```{r play_by_play_data}
-# read play-by-play url
-web_page_data <- read_html(page_url)
+# read play-by-play url, check robots.txt if allowed
+if (robotstxt::paths_allowed(page_url)){
+  web_page_data <- read_html(page_url)
+}
 
 # scrape the url for tables
 event_info <- web_page_data %>%
@@ -65,6 +69,7 @@ box_score <- data.frame(team = c(home_team, away_team),
 
 winner <- box_score %>% filter(final_score == max(.$final_score)) %>% .$team %>% as.character()
 loser <- box_score %>% filter(final_score == min(.$final_score)) %>% .$team %>% as.character()
+opponent <- ifelse(home_team == team_of_interest, away_team, home_team)
 ```
 
 # Cleaning
@@ -122,18 +127,18 @@ game_sequence_df <- start_of_game %>%
 
 ```{r}
 # winning team is on the left side of the title
-if (home_team == winner){
+if (home_team == team_of_interest){
   final_game_sequence_df <- game_sequence_df %>%  
-    mutate(winning_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
-           loser_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+"))),
-           running_score = str_glue("{winning_score}-{loser_score}"),
+    mutate(team_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
+           opponent_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+"))),
+           running_score = str_glue("{team_score}-{opponent_score}"),
            running_score = paste0("<span style='font-size:45pt'>", running_score, "</span>", "<br>", 
                                   "<span style='font-size:20pt'>", time, "</span>"))
 } else {
   final_game_sequence_df <- game_sequence_df %>%  
-    mutate(winning_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+"))),
-           loser_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
-           running_score = str_glue("{winning_score}-{loser_score}"),
+    mutate(team_score = sprintf("%02d", as.numeric(str_extract(running_score, "^[0-9]+"))),
+           opponent_score = sprintf("%02d", as.numeric(str_extract(running_score, "[0-9]+$"))),
+           running_score = str_glue("{team_score}-{opponent_score}"),
            running_score = paste0("<span style='font-size:40pt'>", running_score, "</span>", "<br>", 
                                   "<span style='font-size:25pt'>", time, "</span>"))
 }
@@ -173,28 +178,32 @@ winner_logo <- rasterGrob(w, interpolate=TRUE)
 
 # Colours for title from https://teamcolorcodes.com/nba-team-color-codes/
 
-```{r winner_colour}
+```{r team_colour}
 # obtain the winning team's colour from https://teamcolorcodes.com/nba-team-color-codes/
-team_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(winner, " ", "-")), "-color-codes/")
+team_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(team_of_interest, " ", "-")), "-color-codes/")
 
+if (robotstxt::paths_allowed(team_url)) {
 event_info <- read_html(team_url) %>%
   html_nodes("body") %>%
   html_nodes("div") %>%
   html_text()
+}
 
-winner_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
+team_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
 ```
 
-```{r loser_colour}
+```{r opponent_colour}
 # obtain the losing team's colour from https://teamcolorcodes.com/nba-team-color-codes/
-team_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(loser, " ", "-")), "-color-codes/")
+opponent_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(opponent, " ", "-")), "-color-codes/")
 
-event_info <- read_html(team_url) %>%
+if (robotstxt::paths_allowed(opponent_url)){
+event_info <- read_html(opponent_url) %>%
   html_nodes("body") %>%
   html_nodes("div") %>%
-  html_text() 
+  html_text()
+}
 
-loser_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
+opponent_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
 ```
 
 # Base Plot
@@ -202,14 +211,14 @@ loser_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
 ```{r plot_breaks}
 # winning team players only on the x-axis
 x_axis <- animation_df %>% 
-  filter(team == winner) %>% 
+  filter(team == team_of_interest) %>% 
   distinct(scoring_player)
 ```
 
 ```{r}
 # upper limit
 upper_y_limit <- max(animation_df %>% 
-      filter(team == winner) %>% 
+      filter(team == team_of_interest) %>% 
       select(player_baskets)) + 1
 ```
 
@@ -224,31 +233,31 @@ final_frame_scores <- animation_df %>%
 ```
 
 ```{r}
-if (nchar(winner) < nchar(loser)){
-  white_space_needed <- c(rep("a", times = nchar(loser) - nchar(winner))) %>%
+if (nchar(team_of_interest) < nchar(opponent_url)){
+  white_space_needed <- c(rep("a", times = nchar(opponent) - nchar(team_of_interest))) %>%
     str_flatten()
   
-  centred_title <- paste0("<b style='color:#ffffff'>", white_space_needed, "</b>", "<b style='color:", winner_colour, "'>", winner, "</b>", " def. ", "<b style='color:", loser_colour, "'>", loser, "</b>")
+  centred_title <- paste0("<b style='color:#ffffff'>", white_space_needed, "</b>", "<b style='color:", team_colour, "'>", winner, "</b>", " vs. ", "<b style='color:", opponent_colour, "'>", opponent, "</b>")
   
 } else {
-  white_space_needed <- c(rep("a", times = nchar(winner) - nchar(loser))) %>%
+  white_space_needed <- c(rep("a", times = nchar(team_of_interest) - nchar(opponent))) %>%
     str_flatten()
   
-  centred_title <- paste0("<b style='color:", winner_colour, "'>", winner, "</b>", " def. ", "<b style='color:", loser_colour, "'>", loser, "</b>", "<b style='color:#ffffff>", white_space_needed, "</b>")
+  centred_title <- paste0("<b style='color:", team_colour, "'>", team_of_interest, "</b>", " vs. ", "<b style='color:", opponent_colour, "'>", opponent, "</b>", "<b style='color:#ffffff>", white_space_needed, "</b>")
 }
 ```
 
-```{r, warning = FALSE, dev = "CairoPNG", fig.width = 10.24, fig.height= 5.12, dpi = 300}
+```{r, warning = FALSE, dev = "CairoPNG", fig.width = 9.6, fig.height= 5.4, dpi = 300}
 (base_plot <- animation_df %>%
    ggplot(aes(x = scoring_player, y = player_baskets, group = action_order)) +
    annotation_custom(winner_logo, 
                      xmin = -Inf, xmax = Inf, 
                      ymin = -Inf, ymax = Inf) +
-   geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.065) +
+   geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.075) +
    geom_image(data = animation_df %>% filter(points == 3), 
-              aes(image = str_glue("~/Downloads/flame_ring_copy.png")), size = 0.065) +
+              aes(image = str_glue("~/Downloads/flame_ring_copy.png")), size = 0.075) +
    # geom_text(data = animation_df %>% filter(points == 1), aes(label = "—"), size = 13, colour = "black", alpha = 0.5, nudge_y = 0.05) +
-   geom_text(data = final_frame_scores, aes(label = running_point_total), nudge_y = 1.5) +
+   geom_text(data = final_frame_scores, aes(label = running_point_total), size = 8, face = "bold", nudge_y = 1.5) +
    scale_x_discrete("",
                     limits = x_axis$scoring_player, 
                     labels = str_wrap(x_axis$scoring_player, 2)) +
@@ -264,7 +273,7 @@ if (nchar(winner) < nchar(loser)){
    expand_limits(y = upper_y_limit))
 ```
 
-```{r, dpi = 300}
+```{r, dpi = 300,}
 animated_plot <- base_plot +
   transition_states(running_score, transition_length = 0.8, state_length = 0.2, wrap = FALSE) +
   enter_fly(y_loc = max(animation_df$player_baskets) + 2) +
@@ -277,14 +286,11 @@ animated_plot <- base_plot +
 ```{r, dpi = 300}
 game_date <- str_remove(str_extract(page_url, '[0-9]+'), "0$")
 
-anim_save(animated_plot,
-          filename = str_glue("animations/{winner}_{loser}-{game_date}.gif"), 
-          width = 1024, height = 512,
+anim_save(animate(animated_plot,
+          width = 960, height = 540,
           fps = 30, 
           duration = round(nrow(animation_df)/3), 
-          end_pause = 150,
-          type = "cairo-png"
-)
+          end_pause = 150), filename = str_glue("animations/{team_name}_{opponent_name}-{game_date}.gif"))
 
 beepr::beep()
 ```
