@@ -247,7 +247,7 @@ if (nchar(team_of_interest) < nchar(opponent_url)){
 }
 ```
 
-```{r, warning = FALSE, dev = "CairoPNG", fig.width = 9.6, fig.height= 5.4, dpi = 300}
+```{r, warning = FALSE, dev = "CairoPNG", fig.width = 960, fig.height= 540, dpi = 300}
 (base_plot <- animation_df %>%
    ggplot(aes(x = scoring_player, y = player_baskets, group = action_order)) +
    annotation_custom(winner_logo, 
@@ -290,7 +290,7 @@ anim_save(animate(animated_plot,
           width = 960, height = 540,
           fps = 30, 
           duration = round(nrow(animation_df)/3), 
-          end_pause = 150), filename = str_glue("animations/{team_name}_{opponent_name}-{game_date}.gif"))
+          end_pause = 150), filename = str_glue("animations/{team_of_interest}_{opponent}-{game_date}.gif"))
 
 beepr::beep()
 ```
