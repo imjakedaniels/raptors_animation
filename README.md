@@ -6,7 +6,7 @@
 ## Scraping & animating a basketball game using `{rvest}` & `{gganimate}` 
 
 <p align="center">
-  <img src="https://github.com/imjakedaniels/raptors_animation/blob/master/animations/Toronto Raptors_Utah Jazz-20200309.mp4">
+  <img src="https://github.com/imjakedaniels/raptors_animation/blob/master/animations/Toronto%20Raptors_Cleveland%20Cavaliers-20191231.gif">
 </p>
 
 **Data**: all you will need is play-by-play data sourced from [basketball-reference.com](https://www.basketball-reference.com/boxscores/pbp/201912260OKC.html).
@@ -17,9 +17,9 @@
 
 ## Details
 
-I post these animations to NBA subreddits, like [r/TorontoRaptors](https://www.reddit.com/r/torontoraptors/)
+The image above is outdated. Look at my latest post here: https://www.reddit.com/r/torontoraptors/comments/fh0prr/droppin_baskets_raptors_vs_utah_20200309/
 
-This began as a Toronto Raptors only graph. But I realized, people like to watch when their team win, so it has been adjusted to take any game's data and glorify the winning team. 
+I post these animations to NBA subreddits, like [r/TorontoRaptors](https://www.reddit.com/r/torontoraptors/)
 
 Feel free to check the [issues](https://github.com/imjakedaniels/raptors_animation/issues) to see potential improvements I'm working on.
 
