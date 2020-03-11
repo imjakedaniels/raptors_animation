@@ -23,7 +23,7 @@ theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 # Input
 
 ```{r page_link}
-page_url <- "https://www.basketball-reference.com/boxscores/pbp/202002050TOR.html"
+page_url <- "https://www.basketball-reference.com/boxscores/pbp/202003090UTA.html"
 
 team_of_interest <- "Toronto Raptors"
 ```
@@ -42,8 +42,8 @@ game_data <- web_page_data %>%
   as.data.frame() %>% # convert to data frame
   .[-1,] # remove the first row
 
-names(game_data) <- c("time", "away_action", "away_point_increase", 
-                      "running_score", "home_point_increase", "home_action")
+# set column names
+names(game_data) <- c("time", "away_action", "away_point_increase", "running_score", "home_point_increase", "home_action")
 ```
 
 ```{r team_data}
@@ -66,13 +66,31 @@ final_score_data <- web_page_data %>%
 final_away_score <- as.numeric(final_score_data[1])
 final_home_score <- as.numeric(final_score_data[2])
 
-# combine
-box_score <- data.frame(team = c(home_team, away_team),
-                        final_score = as.numeric(c(final_home_score, final_away_score)))
+```
 
-winner <- box_score %>% filter(final_score == max(.$final_score)) %>% .$team %>% as.character()
-loser <- box_score %>% filter(final_score == min(.$final_score)) %>% .$team %>% as.character()
-opponent <- ifelse(home_team == team_of_interest, away_team, home_team)
+
+```{r team_attributes}
+# define attributes to use for conditionals
+# combine
+box_score <- data.frame(team = c(home_team, 
+                                 away_team),
+                        final_score = c(final_home_score, 
+                                        final_away_score)) %>%
+  mutate(final_score = as.numeric(final_score))
+
+winner <- box_score %>% 
+  filter(final_score == max(.$final_score)) %>% 
+  .$team %>% 
+  as.character()
+
+loser <- box_score %>% 
+  filter(final_score == min(.$final_score)) %>% 
+  .$team %>% 
+  as.character()
+
+opponent <- ifelse(home_team == team_of_interest, 
+                   away_team, home_team)
+
 game_date <- str_remove(str_extract(page_url, '[0-9]+'), "0$")
 ```
 
@@ -81,24 +99,53 @@ game_date <- str_remove(str_extract(page_url, '[0-9]+'), "0$")
 ```{r scoring_plays}
 # filter for only the scoring plays from the table
 scoring_plays <- game_data %>%
-  mutate(home_point_increase = str_extract(home_point_increase, "[0-9]"),
-         away_point_increase = str_extract(away_point_increase, "[0-9]")) %>%
-  filter(!is.na(home_point_increase) | !is.na(away_point_increase),
+  mutate(home_point_increase = 
+           str_extract(home_point_increase, "[0-9]"),
+         away_point_increase = 
+           str_extract(away_point_increase, "[0-9]"),
+         quarter = case_when(
+           str_detect(running_score, "(Jump ball)") ~ "Q1",
+           time == "2nd Q" ~ "Q2",
+           time == "3rd Q" ~ "Q3",
+           time == "4th Q" ~ "Q4")) %>%
+  fill(quarter) %>%
+  filter(!is.na(home_point_increase) |
+           !is.na(away_point_increase), 
          str_detect(running_score, "[0-9]+-[0-9]+"))
 ```
 
 ```{r player_names}
 # clean the data and extract player name from action
 scoring_df <- scoring_plays %>%
-  mutate(scoring_home_player = str_extract(home_action, "[A-Z]\\. [A-Za-z-]+"),
-         scoring_away_player = str_extract(away_action, "[A-Z]\\. [A-Za-z-]+"),
-         scoring_player = paste0(scoring_home_player, scoring_away_player),
-         scoring_player = str_remove(scoring_player, "(NA)")) %>%
-  mutate(points = as.numeric(str_extract(paste0(home_point_increase, away_point_increase), "[0-9]")),
-         team = ifelse(str_detect(home_action, "[a-z]"), home_team, away_team),
-         time = str_remove(time, "\\.0")) %>% # remove the decimal
+  mutate(scoring_home_player = 
+           str_extract(home_action, "[A-Z]\\. [A-Za-z-']+"),
+         scoring_away_player = 
+           str_extract(away_action, "[A-Z]\\. [A-Za-z-']+"),
+         scoring_player = 
+           paste0(scoring_home_player, scoring_away_player),
+         scoring_player = 
+           str_remove(scoring_player, "(NA)"),
+         scoring_player = 
+           str_trim(str_remove(scoring_player, "[A-Z]\\."))) %>%
+  mutate(points = 
+           as.numeric(
+             str_extract(
+             paste0(home_point_increase,
+                    away_point_increase), 
+             "[0-9]")
+             ),
+         team = ifelse(str_detect(home_action, "[a-z]"), 
+                       home_team, away_team),
+         time = str_remove(time, "\\.0"),
+         time = str_glue("{quarter} {time}"),
+         time = 
+           ifelse(
+             running_score == tail(
+               scoring_plays$running_score, 1), 
+             "Final", time)
+         ) %>% 
   group_by(scoring_player) %>%
-  mutate(player_point_total = cumsum(points)) %>% # add a player's running point total
+  mutate(player_point_total = cumsum(points)) %>% 
   ungroup() %>%
   select(time, scoring_player, points, team, running_score, player_point_total) 
 ```
@@ -107,17 +154,22 @@ scoring_df <- scoring_plays %>%
 
 ```{r}
 # make the game start at 00-00
-start_of_game <- data.frame(running_score = "00-00", time = "12:00") 
-end_of_game <- data.frame(running_score = tail(scoring_df$running_score, 1), time = "Final")
+start_of_game <- data.frame(time = "Q1 12:00",
+                            scoring_player = "",
+                            points = 0,
+                            team = "",
+                            running_score = "00-00",
+                            player_point_total = 0
+                            ) %>%
+  mutate_if(is.factor, as.character)
 
 # builds the game's scoring plays and orders them
 game_sequence_df <- start_of_game %>%
   bind_rows(scoring_df) %>%
-  bind_rows(end_of_game) %>%
-  mutate(action_order = row_number()) %>% # frames for the animation
+  mutate(action_order = row_number()) %>%
   group_by(team, scoring_player) %>%
-  mutate(player_baskets = row_number()) %>% # player basket counts
-  ungroup() 
+  mutate(player_baskets = row_number()) %>%
+  ungroup()
 ```
 
 # Create scoreboard
@@ -137,55 +189,97 @@ if (home_team == team_of_interest){
 
 # build scoreboard with team of interest's score on left side
 final_game_sequence_df <- game_sequence_df %>%  
-  mutate(team_score = sprintf("%02d", as.numeric(str_extract(running_score, team_regex))),
-         opponent_score = sprintf("%02d", as.numeric(str_extract(running_score, opponent_regex))),
-         running_score = str_glue("{team_score}-{opponent_score}"),
-         running_score = paste0("<span style='font-size:65pt'>", running_score, "</span>", "<br><br>", 
-                                "<span style='font-size:30pt'>", time, "</span>"))
+  mutate(team_score = 
+           sprintf("%02d", 
+                   as.numeric(str_extract(running_score, 
+                                          team_regex))),
+         opponent_score = 
+           sprintf("%02d", 
+                   as.numeric(str_extract(running_score, 
+                                          opponent_regex))),
+         running_score = 
+           str_glue("{team_score} - {opponent_score}"),
+         running_score = 
+           paste0("<span style='font-size:32pt'>", 
+                  running_score, 
+                  "</span>", "<br>",
+                  "<span style='font-size:16pt'>", 
+                  time, 
+                  "</span>"))
 
 # turn running_score into a factor so I can use {current_frame} to animate the boxscore
 animation_df <- final_game_sequence_df %>%
-  mutate(running_score = factor(running_score, 
-                                levels = .$running_score,
-                                ordered = TRUE))
+  mutate(running_score = 
+           factor(running_score,
+                  levels = final_game_sequence_df$running_score))
 ```
 
 ```{r}
 # total player points for final frame
 final_frame_scores <- animation_df %>% 
   group_by(scoring_player) %>% 
-  filter(player_point_total == max(player_point_total)) %>% 
-  ungroup() %>% 
-  mutate(running_score = tail(.$running_score, 1))
+  filter(player_point_total == max(player_point_total)) %>%
+  ungroup() %>%
+  mutate(running_score = tail(animation_df$running_score, 1),
+         action_order = tail(animation_df$action_order, 1))
 ```
 
-# Getting team image for background
+# Getting team images
 
 ```{r}
 # lookup the team image files
-files <- file.info(list.files(str_glue("{here::here()}/team_images"), 
-                              full.names = TRUE))
+files <- file.info(list.files(
+  str_glue("{here::here()}/team_images"), full.names = TRUE))
 
-image_paths <- data.frame(path = rownames(files))
+image_paths <- data.frame(path = rownames(files)) %>%
+  mutate_if(is.factor, as.character)
+```
 
+
+```{r}
 # look for the team of interest's image 
 team_of_interest_path <- image_paths %>%
-  mutate_if(is.factor, as.character) %>%
   filter(str_detect(path, str_extract(team_of_interest, "[a-zA-Z]+$"))) %>%
+  tail(1) %>%
   .$path
 
-m <- readPNG(team_of_interest_path)
-
-# makes it transparent - 0.2 is alpha
-w <- matrix(rgb(m[,,1],m[,,2],m[,,3], m[,,4] * 0.2), nrow=dim(m)[1])
-team_logo <- rasterGrob(w, interpolate=TRUE)
+team_logo <- rasterGrob(
+  readPNG(team_of_interest_path), 
+  interpolate=TRUE)
 ```
+
+```{r}
+# look for the team of interest's image 
+team_of_interest_alt_path <- image_paths %>%
+  filter(str_detect(path, str_extract(team_of_interest, "[a-zA-Z]+$"))) %>%
+  head(1) %>%
+  .$path
+
+raptors_alt_logo <- rasterGrob(
+  readPNG(team_of_interest_alt_path), 
+  interpolate=TRUE)
+```
+
+```{r}
+# look for the opponent's image 
+opponent_path <- image_paths %>%
+  filter(str_detect(path, str_extract(opponent, "[a-zA-Z]+$"))) %>%
+  .$path
+
+opponent_logo <- rasterGrob(
+  readPNG(opponent_path),
+  interpolate=TRUE)
+```
+
 
 # Colours for title from https://teamcolorcodes.com/nba-team-color-codes/
 
 ```{r team_colour}
 # obtain the winning team's colour from https://teamcolorcodes.com/nba-team-color-codes/
-team_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(team_of_interest, " ", "-")), "-color-codes/")
+team_url <- paste0("https://teamcolorcodes.com/",  
+                   tolower(str_replace_all(team_of_interest, 
+                                           " ", "-")), 
+                   "-color-codes/")
 
 if (robotstxt::paths_allowed(team_url)) {
   event_info <- read_html(team_url) %>%
@@ -194,21 +288,8 @@ if (robotstxt::paths_allowed(team_url)) {
     html_text()
 }
 
-team_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
-```
-
-```{r opponent_colour}
-# obtain the losing team's colour from https://teamcolorcodes.com/nba-team-color-codes/
-opponent_url <- paste0("https://teamcolorcodes.com/",  tolower(str_replace_all(opponent, " ", "-")), "-color-codes/")
-
-if (robotstxt::paths_allowed(opponent_url)){
-  event_info <- read_html(opponent_url) %>%
-    html_nodes("body") %>%
-    html_nodes("div") %>%
-    html_text()
-}
-
-opponent_colour <- str_extract(event_info[9], "#[a-zA-Z0-9]+")
+team_colour <- str_extract(event_info[9], 
+                           "#[a-zA-Z0-9]+")
 ```
 
 # Plot parameters
@@ -221,62 +302,70 @@ x_axis_players <- animation_df %>%
   .$scoring_player
 ```
 
-```{r}
-# set upper limit of chart to scale as needed 
-upper_y_limit <- max(animation_df %>% 
-                       filter(team == team_of_interest) %>% 
-                       select(player_baskets)) + 1
-```
-
-```{r}
-# balance the team names so the "vs." is in the middle of title
-if (nchar(team_of_interest) < nchar(opponent)){
-  white_space_needed <- c(rep("a", times = nchar(opponent) - nchar(team_of_interest))) %>%
-    str_flatten()
-  
-  centred_title <- paste0("<b style='color:#ffffff'>", white_space_needed, "</b>", "<b style='color:", team_colour, "'>", team_of_interest, "</b>", " vs. ", "<b style='color:", opponent_colour, "'>", opponent, "</b>")
-  
-} else {
-  white_space_needed <- c(rep("a", times = nchar(team_of_interest) - nchar(opponent))) %>%
-    str_flatten()
-  
-  centred_title <- paste0("<b style='color:", team_colour, "'>", team_of_interest, "</b>", " vs. ", "<b style='color:", opponent_colour, "'>", opponent, "</b>", "<b style='color:#ffffff>", white_space_needed, "</b>")
-}
-```
-
 ```{r, warning = FALSE}
 # remove the upper and right axis limits
 base_plot <- animation_df %>%
-  ggplot(aes(x = scoring_player, y = player_baskets, group = action_order)) +
-  annotation_custom(team_logo, 
+  ggplot(aes(x = scoring_player, 
+             y = player_baskets, 
+             group = action_order)) +
+   annotation_custom(team_logo, 
                     xmin = -Inf, xmax = Inf, 
                     ymin = -Inf, ymax = Inf) +
-  geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")), size = 0.08) +
-  geom_image(data = animation_df %>% filter(points == 3), 
-             aes(image = str_glue("{here::here()}/emoji/flaming_basketball.png")), size = 0.08) +
-  # geom_text(data = animation_df %>% filter(points == 1), aes(label = "—"), size = 13, colour = "black", alpha = 0.5, nudge_y = 0.05) +
-  geom_text(data = final_frame_scores, aes(label = player_point_total), size = 8, face = "bold",  family = "Digital-7", nudge_y = 2) +
+   annotation_custom(raptors_alt_logo, 
+                     ymin = 21, ymax= 27,
+                     xmin = length(x_axis_players) * 0.225, 
+                     xmax = length(x_axis_players) * 0.425) +
+   annotation_custom(opponent_logo, 
+                     ymin = 21, ymax= 27, 
+                     xmin = length(x_axis_players) * 0.75, 
+                     xmax = length(x_axis_players) * 0.95) +
+#geom_text(data = animation_df %>% filter(points == 1), aes(label = "—"), size = 8, colour = "white", alpha = 0.7, hjust = -0.05) +
+  geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")),
+             size = 0.1) +
+  geom_image(data = animation_df %>% 
+               filter(points == 3), 
+           aes(image = str_glue("{here::here()}/emoji/flaming_basketball.png")), 
+           size = 0.1) +
+ geom_text(data = final_frame_scores, 
+           aes(label = player_point_total), 
+           size = 5, colour = "white", 
+           family = "Montserrat ExtraBold", face = "bold", 
+           nudge_y = 2.5) +
   scale_x_discrete("",
                    limits = x_axis_players, 
                    labels = str_wrap(x_axis_players, 2)) +
-  scale_y_continuous("Baskets",
+  scale_y_continuous("Baskets Scored",
                      breaks = seq(0, 25, by = 5)) + 
-  labs(title = centred_title,
+  labs(title = str_glue("<b style='color:{team_colour};font-size:32px'>TORONTO RAPTORS</b><br><b style='font-size:25px'>\\>DROPPIN' BASKETS</b>"),
        subtitle = "{closest_state}") +
-  theme(panel.grid.major = element_blank(),
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(linetype = 2),
         panel.grid.minor = element_blank(),
-        # panel.background = element_blank(), 
-        # panel.border = element_blank(),
-        # axis.line = element_line(colour = "black"),
-        plot.title = element_markdown(size = 50, face = "bold", colour = "#000000",
-                                      lineheight = 1, vjust = -1, hjust = 0.5),
-        plot.subtitle = element_markdown(face = "bold", hjust = 0.5)) +
-  expand_limits(y = upper_y_limit)
+        panel.background = element_rect(fill = "black"),
+        panel.border = element_blank(),
+        plot.background = element_rect(colour = "black", 
+                                       fill = "black"),
+        plot.title = element_markdown(lineheight = 1,
+                                      family = "Montserrat ExtraBold",
+                                      colour = "white", hjust = -0.2),
+        axis.text.x = element_text(colour = team_colour, 
+                                   size = 14, face = "bold"),
+        axis.text.y = element_text(size = 10, colour = "grey90"),
+        axis.title.y = element_text(size = 13, colour = team_colour,
+                                    face = "bold"),
+        plot.subtitle = element_markdown(family = "Montserrat ExtraBold", 
+                                         face = "bold", colour = "white", 
+                                         hjust = 0.5, lineheight = 1),
+        plot.margin = unit(c(1, 1, 0, 1.2), "cm")) +
+  expand_limits(y = -1:20) +
+  coord_cartesian(clip = 'off') 
 ```
 
-```{r}
+```{r, fig.height = 6, fig.width = 7.2, dev = "cairoPNG"}
 animated_plot <- base_plot +
-  transition_states(running_score, transition_length = 0.8, state_length = 0.2) +
+  transition_states(running_score, 
+                    transition_length = 10, 
+                    state_length = 0, wrap = FALSE) +
   enter_fly(y_loc = max(animation_df$player_baskets) + 2) +
   ease_aes(y = "bounce-out") + 
   shadow_mark()
@@ -284,19 +373,31 @@ animated_plot <- base_plot +
 
 # Saving
 
-```{r, dev = "CairoPNG"}
-# reduce width and height
-animate(plot = animated_plot,
-        width = 960, height = 540,
-        fps = 30,
-        duration = round(nrow(animation_df)/2.75),
-        end_pause = 150)
+```{r}
+saveRDS(animated_plot, "animated_raptors_plot.Rds")
+```
 
-anim_save(filename = str_glue("animations/{team_of_interest}_{opponent}-{game_date}.gif"))
+# Sourcing animation script
+
+```{r}
+library(av)
+options(gganimate.dev_args = list(height = 6, 
+                                  width = 7.2, 
+                                  units = 'in', 
+                                  type = "cairo", 
+                                  res = 144))
+
+t1 <- Sys.time()
+
+animate(plot = animated_plot,
+        fps = 45,
+        duration = round(nrow(animation_df)/2.75),
+        renderer = av_renderer(str_glue(
+          "animations/{team_of_interest}_{opponent}-{game_date}.mp4"))
+        )
 
 t2 <- Sys.time()
 
 t2 - t1
 beepr::beep()
 ```
-
