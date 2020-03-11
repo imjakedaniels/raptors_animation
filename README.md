@@ -6,7 +6,7 @@
 ## Scraping & animating a basketball game using `{rvest}` & `{gganimate}` 
 
 <p align="center">
-  <img src="https://github.com/imjakedaniels/raptors_animation/blob/master/animations/Toronto Raptors_Cleveland Cavaliers-20191231.gif">
+  <img src="https://github.com/imjakedaniels/raptors_animation/blob/master/animations/Toronto Raptors_Utah Jazz-20200309.mp4">
 </p>
 
 **Data**: all you will need is play-by-play data sourced from [basketball-reference.com](https://www.basketball-reference.com/boxscores/pbp/201912260OKC.html).
