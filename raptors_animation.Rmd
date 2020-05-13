@@ -23,7 +23,7 @@ theme_set(theme_light(base_size = 20, base_family = "Roboto Condensed"))
 # Input
 
 ```{r page_link}
-page_url <- "https://www.basketball-reference.com/boxscores/pbp/202003090UTA.html"
+page_url <- "https://www.basketball-reference.com/boxscores/pbp/201905070TOR.html"
 
 team_of_interest <- "Toronto Raptors"
 ```
@@ -65,7 +65,6 @@ final_score_data <- web_page_data %>%
 
 final_away_score <- as.numeric(final_score_data[1])
 final_home_score <- as.numeric(final_score_data[2])
-
 ```
 
 
@@ -263,7 +262,7 @@ raptors_alt_logo <- rasterGrob(
 ```{r}
 # look for the opponent's image 
 opponent_path <- image_paths %>%
-  filter(str_detect(path, str_extract(opponent, "[a-zA-Z]+$"))) %>%
+  filter(str_detect(path, str_extract(opponent, "[0-9a-zA-Z]+$"))) %>%
   .$path
 
 opponent_logo <- rasterGrob(
@@ -302,9 +301,25 @@ x_axis_players <- animation_df %>%
   .$scoring_player
 ```
 
+```{r}
+
+test_df <- animation_df %>%
+  mutate(diff = as.numeric(opponent_score) -as.numeric(team_score),
+         diff_prop = (diff / max(abs(diff)) * 2) + length(x_axis_players) / 2) %>%
+  ggplot(aes(x = diff_prop , y = 0)) +
+  geom_segment(aes(x = length(x_axis_players) / 2, y = 20.5, xend = diff_prop, yend = 20.5, 
+               colour = case_when(diff_prop <= length(x_axis_players) / 2 ~ "blue", diff_prop > length(x_axis_players) / 2 ~ "red")), 
+           colour = "black", size = 2, show.legend = FALSE) +
+  scale_colour_manual(values = c("red", "yellow")) +
+  transition_states(running_score)
+```
+
+
 ```{r, warning = FALSE}
 # remove the upper and right axis limits
 base_plot <- animation_df %>%
+  mutate(diff = as.numeric(opponent_score) -as.numeric(team_score),
+         diff_prop = ((diff / max(abs(diff)) * 4) + length(x_axis_players) / 2) + 0.5) %>%
   ggplot(aes(x = scoring_player, 
              y = player_baskets, 
              group = action_order)) +
@@ -313,12 +328,14 @@ base_plot <- animation_df %>%
                     ymin = -Inf, ymax = Inf) +
    annotation_custom(raptors_alt_logo, 
                      ymin = 21, ymax= 27,
-                     xmin = length(x_axis_players) * 0.225, 
-                     xmax = length(x_axis_players) * 0.425) +
+                     xmin = length(x_axis_players) * 0.15, 
+                     xmax = length(x_axis_players) * 0.35) +
    annotation_custom(opponent_logo, 
                      ymin = 21, ymax= 27, 
                      xmin = length(x_axis_players) * 0.75, 
                      xmax = length(x_axis_players) * 0.95) +
+  geom_segment(aes(x = (length(x_axis_players) / 2 + 0.5), xend = diff_prop), 
+          y = 20.5, yend = 20.5, colour = "white", size = 2, show.legend = FALSE, inherit.aes = FALSE) +
 #geom_text(data = animation_df %>% filter(points == 1), aes(label = "—"), size = 8, colour = "white", alpha = 0.7, hjust = -0.05) +
   geom_image(aes(image = str_glue("{here::here()}/emoji/basketball.png")),
              size = 0.1) +
@@ -334,9 +351,9 @@ base_plot <- animation_df %>%
   scale_x_discrete("",
                    limits = x_axis_players, 
                    labels = str_wrap(x_axis_players, 2)) +
-  scale_y_continuous("Baskets Scored",
+  scale_y_continuous("# of Buckets",
                      breaks = seq(0, 25, by = 5)) + 
-  labs(title = str_glue("<b style='color:{team_colour};font-size:32px'>TORONTO RAPTORS</b><br><b style='font-size:25px'>\\>DROPPIN' BASKETS</b>"),
+  labs(title = str_glue("<b style='color:{team_colour};font-size:32px'>TORONTO RAPTORS</b><br><b style='font-size:25px'>\\>DROPPIN' BUCKETS</b>"),
        subtitle = "{closest_state}") +
   theme(panel.grid.major.x = element_blank(),
         panel.grid.major.y = element_line(linetype = 2),
@@ -359,6 +376,8 @@ base_plot <- animation_df %>%
         plot.margin = unit(c(1, 1, 0, 1.2), "cm")) +
   expand_limits(y = -1:20) +
   coord_cartesian(clip = 'off') 
+
+ggsave("static_plot.png", base_plot, width = 7.2, height = 6, unit = "in")
 ```
 
 ```{r, fig.height = 6, fig.width = 7.2, dev = "cairoPNG"}
@@ -367,8 +386,8 @@ animated_plot <- base_plot +
                     transition_length = 10, 
                     state_length = 0, wrap = FALSE) +
   enter_fly(y_loc = max(animation_df$player_baskets) + 2) +
-  ease_aes(y = "bounce-out") + 
-  shadow_mark()
+  ease_aes(y = "bounce-out") +
+  shadow_mark(exclude_layer = 4)
 ```
 
 # Saving
@@ -382,7 +401,7 @@ saveRDS(animated_plot, "animated_raptors_plot.Rds")
 ```{r}
 library(av)
 options(gganimate.dev_args = list(height = 6, 
-                                  width = 7.2, 
+                                  width = 7.2,  # needs to be flexible based on number of scorers.
                                   units = 'in', 
                                   type = "cairo", 
                                   res = 144))
@@ -393,7 +412,7 @@ animate(plot = animated_plot,
         fps = 45,
         duration = round(nrow(animation_df)/2.75),
         renderer = av_renderer(str_glue(
-          "animations/{team_of_interest}_{opponent}-{game_date}.mp4"))
+          "animations/{team_of_interest}_{opponent}-{game_date}22.mp4"))
         )
 
 t2 <- Sys.time()
