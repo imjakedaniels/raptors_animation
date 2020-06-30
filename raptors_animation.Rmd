@@ -405,7 +405,7 @@ options(gganimate.dev_args = list(height = 6,
                                   units = 'in', 
                                   type = "cairo", 
                                   res = 144))
-
+ 
 t1 <- Sys.time()
 
 animate(plot = animated_plot,
