@@ -301,20 +301,6 @@ x_axis_players <- animation_df %>%
   .$scoring_player
 ```
 
-```{r}
-
-test_df <- animation_df %>%
-  mutate(diff = as.numeric(opponent_score) -as.numeric(team_score),
-         diff_prop = (diff / max(abs(diff)) * 2) + length(x_axis_players) / 2) %>%
-  ggplot(aes(x = diff_prop , y = 0)) +
-  geom_segment(aes(x = length(x_axis_players) / 2, y = 20.5, xend = diff_prop, yend = 20.5, 
-               colour = case_when(diff_prop <= length(x_axis_players) / 2 ~ "blue", diff_prop > length(x_axis_players) / 2 ~ "red")), 
-           colour = "black", size = 2, show.legend = FALSE) +
-  scale_colour_manual(values = c("red", "yellow")) +
-  transition_states(running_score)
-```
-
-
 ```{r, warning = FALSE}
 # remove the upper and right axis limits
 base_plot <- animation_df %>%
